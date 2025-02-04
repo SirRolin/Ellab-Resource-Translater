@@ -179,7 +179,6 @@
             // 
             // AzureRegion
             // 
-            AzureRegion.AutoCompleteMode = AutoCompleteMode.None;
             AzureRegion.AutoCompleteSource = AutoCompleteSource.ListItems;
             AzureRegion.Dock = DockStyle.Fill;
             AzureRegion.FormattingEnabled = true;
@@ -188,7 +187,7 @@
             AzureRegion.Name = "AzureRegion";
             AzureRegion.Size = new Size(825, 23);
             AzureRegion.TabIndex = 10;
-            AzureRegion.Text = "global";
+            AzureRegion.Text = "northeurope";
             // 
             // AzureForm
             // 

@@ -1,9 +1,11 @@
-﻿using System.Windows.Forms;
+﻿using Ellab_Resource_Translater.Util;
+using System.Windows.Forms;
 
 namespace Ellab_Resource_Translater
 {
     partial class Settings
     {
+
         /// <summary>
         /// Required designer variable.
         /// </summary>
@@ -43,9 +45,14 @@ namespace Ellab_Resource_Translater
             translationLabel = new Label();
             translationCheckedListBox = new CheckedListBox();
             flowLayoutPanel1 = new FlowLayoutPanel();
+            panel1 = new Panel();
+            coresNumeric = new NumericUpDown();
+            label1 = new Label();
             LocationTablePanel.SuspendLayout();
             translationPanel.SuspendLayout();
             flowLayoutPanel1.SuspendLayout();
+            panel1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)coresNumeric).BeginInit();
             SuspendLayout();
             // 
             // NotEmFBDialog
@@ -181,11 +188,46 @@ namespace Ellab_Resource_Translater
             // flowLayoutPanel1
             // 
             flowLayoutPanel1.Controls.Add(translationPanel);
+            flowLayoutPanel1.Controls.Add(panel1);
             flowLayoutPanel1.Dock = DockStyle.Fill;
             flowLayoutPanel1.Location = new Point(0, 88);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
             flowLayoutPanel1.Size = new Size(624, 465);
             flowLayoutPanel1.TabIndex = 5;
+            // 
+            // panel1
+            // 
+            panel1.AutoSize = true;
+            panel1.Controls.Add(coresNumeric);
+            panel1.Controls.Add(label1);
+            panel1.Location = new Point(148, 15);
+            panel1.Margin = new Padding(15);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(178, 52);
+            panel1.TabIndex = 1;
+            // 
+            // coresNumeric
+            // 
+            coresNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            coresNumeric.Location = new Point(3, 26);
+            coresNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
+            coresNumeric.Name = "coresNumeric";
+            coresNumeric.Size = new Size(172, 23);
+            coresNumeric.TabIndex = 1;
+            coresNumeric.Value = new decimal(new int[] { 32, 0, 0, 0 });
+            coresNumeric.ValueChanged += numericUpDown1_ValueChanged;
+            // 
+            // label1
+            // 
+            label1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            label1.AutoSize = true;
+            label1.Location = new Point(3, 3);
+            label1.Margin = new Padding(3);
+            label1.Name = "label1";
+            label1.Padding = new Padding(3);
+            label1.Size = new Size(172, 21);
+            label1.TabIndex = 0;
+            label1.Text = "Workers (0 = sync, norm 8-32)";
             // 
             // Settings
             // 
@@ -202,6 +244,9 @@ namespace Ellab_Resource_Translater
             translationPanel.ResumeLayout(false);
             flowLayoutPanel1.ResumeLayout(false);
             flowLayoutPanel1.PerformLayout();
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)coresNumeric).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -220,5 +265,8 @@ namespace Ellab_Resource_Translater
         private Label translationLabel;
         private CheckedListBox translationCheckedListBox;
         private FlowLayoutPanel flowLayoutPanel1;
+        private Panel panel1;
+        private NumericUpDown coresNumeric;
+        private Label label1;
     }
 }
