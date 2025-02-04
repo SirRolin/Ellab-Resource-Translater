@@ -6,11 +6,27 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Enums
 {
+    [Flags]
     public enum ConnType
     {
         None = 0,
         MySql = 1 << 0,
         MSSql = 1 << 1,
-        PostgreSql = 1 << 2
+        PostgreSql = 1 << 2,
+        IS = 1 << 31,
+        MySqlIS = MySql | IS,
+        MSSqlIS = MSSql | IS
+    }
+
+    public static class ConnTypeExtender
+    {
+        public static bool HasAny(this ConnType tct, ConnType ct)
+        {
+            return (ct & tct) != 0;
+        }
+        public static bool HasAll(this ConnType tct, ConnType ct)
+        {
+            return (ct & tct) == tct;
+        }
     }
 }

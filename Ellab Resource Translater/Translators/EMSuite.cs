@@ -11,23 +11,25 @@ using System.Resources;
 using System.Text.RegularExpressions;
 using static System.Net.Mime.MediaTypeNames;
 using System.Windows.Forms;
+using Ellab_Resource_Translater.Objects;
+using System.Linq;
 
 namespace Ellab_Resource_Translater.Translators
 {
-    internal class EMSuite(TranslationService translationService, DbConnection DBCon)
+    internal class EMSuite(TranslationService? translationService, DbConnectionExtension? DBCon)
     {
         private const int MAX_THREADS = 32;
         private const int SYSTEM_ENUM = 1; // For the Database
         private readonly Config config = Config.Get();
 
-        private readonly TranslationService TranslationService = translationService;
-        private readonly DbConnection DBCon = DBCon;
+        private readonly TranslationService? TranslationService = translationService;
+        private readonly DbConnectionExtension? DBCon = DBCon;
         internal void Run(string path, ListView view, Label progresText)
         {
             // Tracks resources done - Starts at -1 so that we can call it to get the right format to start with.
             int currentProcessed = -1;
 
-            //// Regex 
+            //// Regex Explained
             /// .*\\\\Resources\\\\ means it's in a Resources folder
             /// .* means anything in there
             /// (?<!\\...) means there shouldn't be a . followed by 2 other characters
@@ -35,7 +37,7 @@ namespace Ellab_Resource_Translater.Translators
             /// 
             Regex regex = new(".*\\\\Resources\\\\.*(?<!\\...)\\.resx");
             var allResources = Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories).ToHashSet();
-            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Where(x => regex.IsMatch(x)).Take(1)); // TODO:
+            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Where(x => regex.IsMatch(x)).Take(1));
 
             int maxProcesses = englishQueuedFiles.Count;
 
@@ -67,7 +69,7 @@ namespace Ellab_Resource_Translater.Translators
             {
                 if (queue.TryDequeue(out var resource))
                 {
-                    string shortenedPath = resource.Substring(pathLength + 1);
+                    string shortenedPath = resource[(pathLength + 1)..]; // Remove the root path
                     listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
                     TranslateResource(existingResources, resource);
                     listView.Invoke(() => listView.Items.Remove(listViewItem));
@@ -84,7 +86,7 @@ namespace Ellab_Resource_Translater.Translators
             Dictionary<string, Dictionary<string, Translation>> translations = [];
 
             // Retrieve the English information
-            translations.Add("en", ReadResource(resource));
+            translations.Add("EN", ReadResource(resource));
 
             // Translations work
             var langs = config.languagesToTranslate.ToArray();
@@ -99,15 +101,17 @@ namespace Ellab_Resource_Translater.Translators
                     translations.Add(lang, ReadResource(langPath));
 
                 // Add all missing translations
-                foreach (string entry in translations["en"].Keys)
+                foreach (string entry in translations["EN"].Keys)
                 {
                     if (!translations[lang].TryGetValue(entry, out Translation? trans) || string.IsNullOrEmpty(trans.value))
                     {
-                        var value = aiTrans ? string.Empty : translations["en"][entry].value;
-                        var comment = translations["en"][entry].comment;
+                        var value = aiTrans ? string.Empty : translations["EN"][entry].value;
+                        var comment = translations["EN"][entry].comment;
 
                         // In Case of only the value is empty
                         translations[lang].Remove(entry);
+
+                        // Add it to the Languages Dictionary
                         trans = new Translation(entry, value, comment);
                         translations[lang].Add(entry, trans);
                     }
@@ -118,7 +122,171 @@ namespace Ellab_Resource_Translater.Translators
                     TranslateMissingValues(translations, lang);
             }
 
+            // Save Translations
+            foreach (var item in translations)
+            {
+                if (!item.Key.Equals("EN"))
+                    WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
+            }
+
+            // Try to write to the Database
+            await WriteToDatabase(resource, translations);
+        }
+
+        private async Task WriteToDatabase(string resource, Dictionary<string, Dictionary<string, Translation>> translations)
+        {
+            if (DBCon != null)
+            {
+                DataTable dataTable = CreateDataTable(resource, translations);
+
+                bool batchFailed = false;
+                // Upload to the Database
+                if (DBCon.canMultiResult && DBCon.connection is SqlConnection sqlCon && sqlCon.CanCreateBatch)
+                {
+                    var s = sqlCon.CreateBatch();
+                    var c = s.CreateBatchCommand();
+                    // Key have to have quotes as "Key" is a keyword used in SQL
+                    c.CommandText = @"
+                            INSERT INTO Translation 
+                                (Comment, ""Key"", LanguageCode, ResourceName, Text, IsTranlatedInValSuite, SystemEnum) 
+                            VALUES 
+                                (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum)";
+
+                    AddParam(dataTable, c, "Comment");
+                    AddParam(dataTable, c, "Key");
+                    AddParam(dataTable, c, "LanguageCode");
+                    AddParam(dataTable, c, "ResourceName");
+                    AddParam(dataTable, c, "Text");
+                    AddParam(dataTable, c, "IsTranlatedInValSuite");
+                    AddParam(dataTable, c, "SystemEnum");
+
+                    try
+                    {
+                        await DBCon.ThreadSafeAsyncFunction((s) => { 
+                                var t = s.BeginTransaction();
+                                
+                                t.Commit();
+                            });
+                    }
+                    catch
+                    {
+                        batchFailed = true;
+                    }
+                    /*
+                    using SqlBulkCopy dbBatch = new(sqlCon);
+                    dbBatch.DestinationTableName = "Translation";
+                    try
+                    {
+                        await DBCon.ThreadSafeAsyncFunction((s) => { dbBatch.WriteToServerAsync(dataTable); });
+                    }
+                    catch
+                    {
+                        batchFailed = true;
+                    }*/
+                }
+                else
+                {
+                    batchFailed = true;
+                }
+                if (batchFailed)
+                {
+                    using DbCommand command = DBCon.connection.CreateCommand();
+                    // Key have to have quotes as "Key" is a keyword used in SQL
+                    command.CommandText = @"
+                            INSERT INTO Translation 
+                                (Comment, ""Key"", LanguageCode, ResourceName, Text, IsTranlatedInValSuite, SystemEnum) 
+                            VALUES 
+                                (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum)";
+
+                    // Comment
+                    var paramComment = command.CreateParameter();
+                    paramComment.ParameterName = "@Comment";
+                    command.Parameters.Add(paramComment);
+
+                    // Key
+                    var paramKey = command.CreateParameter();
+                    paramKey.ParameterName = "@Key";
+                    command.Parameters.Add(paramKey);
+
+                    // languageCode
+                    var paramLanguageCode = command.CreateParameter();
+                    paramLanguageCode.ParameterName = "@LanguageCode";
+                    command.Parameters.Add(paramLanguageCode);
+
+                    // ResourceName
+                    var paramResourceName = command.CreateParameter();
+                    paramResourceName.ParameterName = "@ResourceName";
+                    command.Parameters.Add(paramResourceName);
+
+                    // Text
+                    var paramText = command.CreateParameter();
+                    paramText.ParameterName = "@Text";
+                    command.Parameters.Add(paramText);
+
+                    // IsTranlatedInValSuite
+                    var paramIsTranlatedInValSuite = command.CreateParameter();
+                    paramIsTranlatedInValSuite.ParameterName = "@IsTranlatedInValSuite";
+                    command.Parameters.Add(paramIsTranlatedInValSuite);
+
+                    // SystemEnum
+                    var paramSystemEnum = command.CreateParameter();
+                    paramSystemEnum.ParameterName = "@SystemEnum";
+                    command.Parameters.Add(paramSystemEnum);
+
+                    foreach (DataRow row in dataTable.Rows)
+                    {
+                        // Preparing the Values
+                        paramComment.Value = row["Comment"] ?? "";
+                        paramKey.Value = row["Key"];
+                        paramLanguageCode.Value = row["LanguageCode"];
+                        paramResourceName.Value = row["ResourceName"];
+                        paramText.Value = row["Text"];
+                        paramIsTranlatedInValSuite.Value = row["IsTranlatedInValSuite"];
+                        paramSystemEnum.Value = row["SystemEnum"];
+
+                        // Executing Time
+                        int tries = 0;
+                        while (tries < 2)
+                        {
+                            try
+                            {
+                                await DBCon.ThreadSafeAsyncFunction((s) =>
+                                {
+                                    // Sometimes the connection closes
+                                    if (DBCon.connection.State != ConnectionState.Open)
+                                        DBCon.connection.Open();
+
+                                    command.ExecuteNonQuery();
+                                });
+                                break;
+                            }
+                            catch
+                            {
+                                tries++;
+                                Task.Delay(500).Wait(); // Wait half a second.
+                            }
+                            if (tries == 2)
+                            {
+                                MessageBox.Show("failed to upload to the database:" + resource);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void AddParam(DataTable dataTable, DbBatchCommand c, string name)
+        {
+            var paramComment = c.CreateParameter();
+            paramComment.ParameterName = "@" + name;
+            paramComment.Value = dataTable.Columns[name];
+            c.Parameters.Add(paramComment);
+        }
+
+        private static DataTable CreateDataTable(string resource, Dictionary<string, Dictionary<string, Translation>> translations)
+        {
             DataTable dataTable = new();
+            dataTable.Columns.Add("ID", typeof(long));
             dataTable.Columns.Add("Comment", typeof(string));
             dataTable.Columns.Add("Key", typeof(string));
             dataTable.Columns.Add("LanguageCode", typeof(string));
@@ -136,109 +304,65 @@ namespace Ellab_Resource_Translater.Translators
                     string key = value.Key;
                     string text = value.Value.value; // Stonks
 
-                    dataTable.Rows.Add(comment,
+                    dataTable.Rows.Add(null, // ID, should autogenerate
+                                        comment,
                                         key,
                                         language,
                                         resourceName,
-                                        text,                           
-                                        false,                                                           
-                                        SYSTEM_ENUM                                                      
+                                        text,
+                                        false,
+                                        SYSTEM_ENUM
                                         );
                 }
             }
-            // Upload to the Database
-            if (DBCon.CanCreateBatch && DBCon is SqlConnection sqlCon)
-            {
-                using SqlBulkCopy dbBatch = new(sqlCon);
-                dbBatch.DestinationTableName = "Translation";
-                await dbBatch.WriteToServerAsync(dataTable);
-            }
-            else
-            {
 
-                foreach (DataRow row in dataTable.Rows)
-                {
-                    using DbCommand command = DBCon.CreateCommand();
-                    command.CommandText = @"
-                        INSERT INTO Translation 
-                            (Comment, Key, LanguageCode, ResourceName, Text, IsTranlatedInValSuite, SystemEnum) 
-                        VALUES 
-                            (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum)";
-
-                    // Comment
-                    var paramComment = command.CreateParameter();
-                    paramComment.ParameterName = "@Comment";
-                    paramComment.Value = row["Comment"] ?? DBNull.Value;
-                    command.Parameters.Add(paramComment);
-
-                    // Key
-                    var paramKey = command.CreateParameter();
-                    paramKey.ParameterName = "@Key";
-                    paramKey.Value = row["Key"];
-                    command.Parameters.Add(paramKey);
-
-                    // languageCode
-                    var paramLanguageCode = command.CreateParameter();
-                    paramLanguageCode.ParameterName = "@LanguageCode";
-                    paramLanguageCode.Value = row["LanguageCode"];
-                    command.Parameters.Add(paramLanguageCode);
-
-                    // ResourceName
-                    var paramResourceName = command.CreateParameter();
-                    paramResourceName.ParameterName = "@ResourceName";
-                    paramResourceName.Value = row["ResourceName"];
-                    command.Parameters.Add(paramResourceName);
-
-                    // Text
-                    var paramText = command.CreateParameter();
-                    paramText.ParameterName = "@Text";
-                    paramText.Value = row["Text"];
-                    command.Parameters.Add(paramText);
-
-                    // IsTranlatedInValSuite
-                    var paramIsTranlatedInValSuite = command.CreateParameter();
-                    paramIsTranlatedInValSuite.ParameterName = "@IsTranlatedInValSuite";
-                    paramIsTranlatedInValSuite.Value = row["IsTranlatedInValSuite"];
-                    command.Parameters.Add(paramIsTranlatedInValSuite);
-
-                    // SystemEnum
-                    var paramSystemEnum = command.CreateParameter();
-                    paramSystemEnum.ParameterName = "@SystemEnum";
-                    paramSystemEnum.Value = row["SystemEnum"];
-                    command.Parameters.Add(paramSystemEnum);
-
-                    // Executing Time
-                    await command.ExecuteNonQueryAsync();
-                }
-            }
-
-            // Save Translations
-            foreach (var item in translations)
-            {
-                if(!item.Key.Equals("en"))
-                    WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
-            }
+            return dataTable;
         }
 
         private void TranslateMissingValues(Dictionary<string, Dictionary<string, Translation>> translations, string lang)
         {
             // Find missing translation keys
-            List<string> emptyTranslations = translations[lang].Values.Where(x => x.value == string.Empty).Select(x => x.key).ToList();
+            List<Translation> emptyTranslations = translations[lang].Values.Where(x => x.value == string.Empty).ToList();
+
+            // Nothing to translate? return
+            if (emptyTranslations.Count == 0)
+                return;
 
             // Get missing translation values in english as a Reverse Dictionary
-            Dictionary<string, string> kvp = translations["en"].Where(x => emptyTranslations.Contains(x.Key))
-                .Select(x => new KeyValuePair<string, string>(x.Value.value ?? "", x.Key))
-                .ToDictionary();
-            string[] textsToTranslate = [.. kvp.Keys];
+            // Filter so we don't get errors
+            // GroupBy so that dublicate values doesn't break as it becomes a key
+            Dictionary<string, Translation[]> kvp = emptyTranslations.Where(x => translations["EN"].ContainsKey(x.key))
+                .GroupBy(x => translations["EN"][x.key].value, x => x)
+                .ToDictionary(g => g.Key, g => g.ToArray());
 
-            var response = TranslationService.TranslateTextAsync(textsToTranslate, lang).Result;
-            foreach (var item in response.Value)
+
+            // To Do Fix the random empty strings that's introduced by some strings
+
+
+            string[] textsToTranslate = [.. kvp.Keys];
+            if (textsToTranslate.Length > 0 && TranslationService != null)
             {
-                var itemST = item.SourceText.Text;
-                Translation transItem = translations[lang][kvp[itemST]];
-                transItem.value = item.Translations[0]?.Text ?? translations["en"][itemST].value;
-                transItem.comment = String.Join("\n", transItem.comment, "Ai Translated.");
-            };
+                var response = TranslationService.TranslateTextAsync(textsToTranslate, lang).Result;
+                foreach (var item in response.Value)
+                {
+                    var itemST = item.SourceText.Text;
+                    foreach(var s in kvp.Where(x => itemST.Equals(x.Key)).Select(x => x.Value).First())
+                    {
+                        Translation transItem = translations[lang][s.key];
+                        string? text = item.Translations[0]?.Text ?? null;
+                        if (text != null)
+                        {
+                            transItem.value = text;
+                            transItem.comment = String.Join("\n", transItem.comment, "Ai Translated.");
+                        } 
+                        else
+                        {
+                            transItem.value = translations["EN"][itemST].value;
+                            transItem.comment = String.Join("\n", transItem.comment, "Attempted Ai Translation Failed.");
+                        }
+                    }
+                };
+            }
         }
 
         private static Dictionary<string, Translation> ReadResource(string path)
@@ -274,13 +398,10 @@ namespace Ellab_Resource_Translater.Translators
 
         private static void WriteResource(string path, Dictionary<string, Translation> trans)
         {
-            using (ResXResourceWriter resxWriter = new(path))
+            using ResXResourceWriter resxWriter = new(path);
+            foreach (var entry in trans)
             {
-                foreach (var entry in trans)
-                {
-                    var dataInfo = new ResXDataNode(entry.Key, entry.Value.value);
-                    resxWriter.AddResource(entry.Key, entry.Value.value);
-                }
+                resxWriter.AddResource(entry.Key, entry.Value.value);
             }
         }
     }

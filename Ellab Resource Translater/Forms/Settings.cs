@@ -46,7 +46,7 @@ namespace Ellab_Resource_Translater
             }
         }
 
-        private void translationCheckedListBox_SelectedIndexChanged(object sender, EventArgs e)
+        private void TranslationCheckedListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             // While Loading I don't want this to run
             if (setup > 0)

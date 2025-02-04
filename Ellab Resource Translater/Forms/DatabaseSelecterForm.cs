@@ -84,31 +84,56 @@ namespace Ellab_Resource_Translater.Forms
 
         private void SaveButton_Click(object sender, EventArgs e)
         {
-            string connectionString = "";
-            switch (connectionStringChoice.SelectedIndex)
+            string connectionString = connectionStringChoice.SelectedIndex switch
             {
-                case 0:
-                    //MySQLPanel.Show();
-                    break;
-                case 1:
-                    //SqlServerPanel.Show();
-                    break;
-                case 2:
-                    //PostgreSqlPanel.Show();
-                    break;
-                case 3:
-                    connectionString = DBStringHandler.JsonExtractIfNeeded(ManuelStringText.Text);
-                    break;
-                default:
-                    break;
-            }
-            MessageBox.Show("Type: " + DBStringHandler.DetectType(connectionString));
+                0 => MySqlConnString(),
+                1 => MSSqlConnString(),
+                2 => PostgreSqlConnString(),
+                3 => DBStringHandler.JsonExtractIfNeeded(ManuelStringText.Text),
+                _ => "" // Default
+            };
+
+            // In Case someone somehow can input something wrong in a dropdownlist
+            if (connectionString == "") return;
+
             if (DBStringHandler.DetectType(connectionString) != ConnType.None)
             {
                 SecretManager.SetUserSecret(MainForm.CONNECTION_SECRET, connectionString);
                 mainFormParent.TryConnectDB();
-                //this.Close();
+                this.Close();
             }
+        }
+
+        private string PostgreSqlConnString()
+        {
+            return $"Host={PostgresHostText.Text};Port={(PostgresPortText.Text == "" ? "5432" : PostgresPortText.Text)}; Database={PostgresDatabaseText.Text}; User ID={PostgresUserIDText.Text}; Password={PostgresPasswordText.Text}";
+        }
+
+        private string MSSqlConnString()
+        {
+            return $"Server={MSSqlServerText.Text}{(MSSqlPortText.Text != "" ? "," + MSSqlPortText.Text : "")};Database={MSSqlDatabaseText.Text};Persist Security Info=False;User ID={MSSqlUserIDText.Text};Password={MSSqlPasswordText};MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;";
+        }
+
+        private string MySqlConnString()
+        {
+            StringBuilder sb = new();
+            sb.Append($"Server ={ MySqlServerText.Text};");
+            if(MySqlPortText.Text.Length > 0)
+                sb.Append($"port={ MySqlPortText.Text};");
+            sb.Append($"Database={MySqlDatabaseText.Text};Uid={MySqlUserIDText.Text};Pwd={MySqlPasswordText};Encrypt=True;SslMode=Required;default command timeout=30;");
+            return sb.ToString();
+        }
+
+        private void MySqlIsCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            MySqlUserIDText.Enabled = MySqlISCheckBox.Checked;
+            MySqlPasswordText.Enabled = MySqlISCheckBox.Checked;
+        }
+
+        private void MSSQLISCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            MSSqlUserIDText.Enabled = MSSqlISCheckBox.Checked;
+            MSSqlPasswordText.Enabled = MSSqlISCheckBox.Checked;
         }
     }
 }

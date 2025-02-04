@@ -176,7 +176,7 @@ namespace Ellab_Resource_Translater
             translationCheckedListBox.Size = new Size(100, 202);
             translationCheckedListBox.Sorted = true;
             translationCheckedListBox.TabIndex = 5;
-            translationCheckedListBox.ItemCheck += translationCheckedListBox_SelectedIndexChanged;
+            translationCheckedListBox.ItemCheck += TranslationCheckedListBox_SelectedIndexChanged;
             // 
             // flowLayoutPanel1
             // 

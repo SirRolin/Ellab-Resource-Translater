@@ -1,12 +1,8 @@
 using Azure;
-using Azure.AI.Translation.Text;
-using Azure.Core;
 using Ellab_Resource_Translater.Forms;
+using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Util;
-using System.Data.Common;
-using System.Drawing;
-using System.Net;
-using System.Runtime.CompilerServices;
+using Newtonsoft.Json;
 
 namespace Ellab_Resource_Translater
 {
@@ -15,8 +11,10 @@ namespace Ellab_Resource_Translater
         private Settings? activeSetting;
         private int setup = 0;
         private bool batching = false;
-        private DbConnection? dbConnection;
+        private DbConnectionExtension? dbConnection;
+        private TranslationService? translationService;
         internal const string CONNECTION_SECRET = "EllabResourceTranslator:dbConnection";
+        internal const string AZURE_SECRET = "EllabResourceTranslator:azure";
         public MainForm()
         {
             InitializeComponent();
@@ -27,6 +25,7 @@ namespace Ellab_Resource_Translater
             var config = Config.Get();
             var languagePairs = Config.DefaultLanguages();
             var checkitems = config.languagesToTranslate;
+
             setup++;
             RolinsFormUtils.LoadCheckboxListLocalised(
                 list: checkitems,
@@ -35,7 +34,7 @@ namespace Ellab_Resource_Translater
                 );
 
             TryConnectDB();
-
+            TryConnectAzure();
             setup--;
         }
 
@@ -46,40 +45,113 @@ namespace Ellab_Resource_Translater
                 TryCloseDBConnection();
 
                 string? dbConn = SecretManager.GetUserSecret(CONNECTION_SECRET);
+
+                // Debugging
+                //RefreshConnectionButton.Invoke(() => MessageBox.Show(dbConn.Replace(";", ";\n")));
+
+                // Avoid trying to refresh while still connecting.
                 RefreshConnectionButton.Invoke(() => RefreshConnectionButton.Enabled = false);
+
                 if (dbConn != null)
                 {
-                    dbConnection = DBStringHandler.CreateDbConnection(dbConn);
-                    connectionStatus.Invoke(() => connectionStatus.Text = "Connecting...");
+                    dbConnection = new(DBStringHandler.CreateDbConnection(dbConn), dbConn);
+                    connectionStatus.Invoke(() => connectionStatus.Text = "DB Connecting...");
                     try
                     {
-                        await dbConnection.OpenAsync();
+                        await dbConnection.connection.OpenAsync();
                     }
                     catch (Exception ex)
                     {
                         connectionStatus.Invoke(() => connectionStatus.Text = ex.Message);
                         return;
                     }
-                    if (dbConnection.State == System.Data.ConnectionState.Open)
+                    if (dbConnection.connection.State == System.Data.ConnectionState.Open)
                     {
-                        connectionStatus.Invoke(() => connectionStatus.Text = "Connected");
+                        connectionStatus.Invoke(() => connectionStatus.Text = "DB Connected");
                     }
+                    return;
                 }
                 else
                 {
                     connectionStatus.Invoke(() =>
                     {
-                        connectionStatus.Text = "Need Connection String - Try Setup";
+                        connectionStatus.Text = "DB, Need Connection String - Try Setup";
                     });
                 }
+
+                // Reenabling the refresh
+                RefreshConnectionButton.Invoke(() => RefreshConnectionButton.Enabled = true);
+            });
+        }
+
+        public Task TryConnectAzure()
+        {
+            return Task.Run(() =>
+            {
+                AzureCredentials? azureCreds;
+
+                try
+                {
+                    string? jsonCreds = SecretManager.GetUserSecret(AZURE_SECRET);
+                    if (jsonCreds != null)
+                        azureCreds = JsonConvert.DeserializeObject<AzureCredentials>(jsonCreds);
+                    else
+                    {
+                        AzureConnectionStatus.Invoke(() => {
+                            AzureConnectionStatus.Text = "Azure, Need Credentials";
+                            OpenAzureSetup();
+                        });
+                        return;
+                    }
+                }
+                catch
+                {
+                    AzureConnectionStatus.Invoke(() => {
+                        AzureConnectionStatus.Text = "Azure, Error with stored Credentials";
+                        OpenAzureSetup();
+                    });
+                    return;
+                }
+                
+
+                // Avoid trying to refresh while still connecting.
+                RefreshAzureButton.Invoke(() => RefreshAzureButton.Enabled = false);
+
+                if (azureCreds != null)
+                {
+                    AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = "Azure Connecting...");
+                    try
+                    {
+                        AzureKeyCredential credentials = new(azureCreds.Key);
+                        translationService = new(creds: credentials, uri: new Uri(azureCreds.URI), region: azureCreds.Region);
+                        AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = "Azure Connected");
+                    }
+                    catch (Exception ex)
+                    {
+                        AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = ex.Message);
+                        return;
+                    }
+                    return;
+                }
+                else
+                {
+                    AzureConnectionStatus.Invoke(() =>
+                    {
+                        AzureConnectionStatus.Text = "Azure, Need Credentials";
+                        OpenAzureSetup();
+                    });
+                }
+
+                // Reenabling the refresh
+                RefreshAzureButton.Invoke(() => RefreshAzureButton.Enabled = true);
             });
         }
 
         private void TryCloseDBConnection()
         {
-            if (dbConnection != null && dbConnection.State != System.Data.ConnectionState.Closed)
+            if (dbConnection != null && dbConnection.connection.State != System.Data.ConnectionState.Closed)
             {
-                dbConnection.Close();
+                dbConnection.connection.Close();
                 connectionStatus.Invoke(() => connectionStatus.Text = "Closed");
             }
         }
@@ -104,7 +176,7 @@ namespace Ellab_Resource_Translater
             }
         }
 
-        private void translationCheckedListBox_CheckChanged(object sender, EventArgs e)
+        private void TranslationCheckedListBox_CheckChanged(object sender, EventArgs e)
         {
             // While Loading I don't want this to run
             if (setup > 0)
@@ -161,18 +233,25 @@ namespace Ellab_Resource_Translater
             EMSuiteButton.Enabled = false;
             EMandValButton.Enabled = false;
 
-            //TextTranslationClient client = new(new AzureKeyCredential(""), new Uri(""), ""); // TODO test without this AND after database setup with this
-            TranslationService transServ = null;// new(client);
+            if(Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
+            {
+                await Task.Run(() => EMSuite_Init(translationService));
 
-            await Task.Run(() => EMSuite_Init(transServ));
+                progressTitle.Invoke(() => progressTitle.Text = "Done");
+            }
+            else
+            {
+                MessageBox.Show(@"Azure not connected, you can either:
+    1) Setup Azure in the Azure button at the buttom.
+    2) Disable AI Translation for all groups in Settings");
+            }
 
-            progressTitle.Invoke(() => progressTitle.Text = "Done");
             ValSuiteButton.Enabled = true;
             EMSuiteButton.Enabled = true;
             EMandValButton.Enabled = true;
         }
 
-        private void EMSuite_Init(TranslationService transServ)
+        private void EMSuite_Init(TranslationService? transServ)
         {
             progressTitle.Invoke(() => progressTitle.Text = "EM Suite");
             var config = Config.Get();
@@ -198,14 +277,11 @@ namespace Ellab_Resource_Translater
             ValSuiteButton.Enabled = false;
             EMSuiteButton.Enabled = false;
             EMandValButton.Enabled = false;
-
-            TextTranslationClient client = new(new AzureKeyCredential(""), new Uri(""), "");
-            TranslationService transServ = new(client);
-
+            
             batching = true;
 
             if (batching)
-                await Task.Run(() => EMSuite_Init(transServ));
+                await Task.Run(() => EMSuite_Init(translationService));
             if (batching) // in case we want to cancel after finding out EMsuite didn't have a value
                 await Task.Run(() => ValSuite_Init());
 
@@ -221,6 +297,27 @@ namespace Ellab_Resource_Translater
         {
             DatabaseSelecterForm form = new(this);
             form.ShowDialog();
+        }
+
+        private void AzureSettingsSetup_Click(object sender, EventArgs e)
+        {
+            OpenAzureSetup();
+        }
+
+        private void OpenAzureSetup()
+        {
+            AzureForm azureform = new(this);
+            azureform.ShowDialog();
+        }
+
+        private void RefreshConnectionButton_Click(object sender, EventArgs e)
+        {
+            TryConnectDB();
+        }
+
+        private void RefreshAzureButton_Click(object sender, EventArgs e)
+        {
+            TryConnectAzure();
         }
     }
 }
