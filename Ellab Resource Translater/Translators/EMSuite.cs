@@ -37,7 +37,7 @@ namespace Ellab_Resource_Translater.Translators
             /// 
             Regex regex = new(".*\\\\Resources\\\\.*(?<!\\...)\\.resx");
             var allResources = Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories).ToHashSet();
-            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Where(x => regex.IsMatch(x)).Take(1));
+            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Where(x => regex.IsMatch(x)));
 
             int maxProcesses = englishQueuedFiles.Count;
 
