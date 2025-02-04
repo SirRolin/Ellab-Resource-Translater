@@ -141,48 +141,39 @@ namespace Ellab_Resource_Translater.Translators
 
                 bool batchFailed = false;
                 // Upload to the Database
-                if (DBCon.canMultiResult && DBCon.connection is SqlConnection sqlCon && sqlCon.CanCreateBatch)
+                if (DBCon.connection.CanCreateBatch)
                 {
-                    var s = sqlCon.CreateBatch();
-                    var c = s.CreateBatchCommand();
-                    // Key have to have quotes as "Key" is a keyword used in SQL
-                    c.CommandText = @"
+                    var s = DBCon.connection.CreateBatch();
+
+                    foreach (DataRow row in dataTable.Rows)
+                    {
+                        var c = s.CreateBatchCommand();
+                        // Key have to have quotes as "Key" is a keyword used in SQL
+                        c.CommandText = @"
                             INSERT INTO Translation 
                                 (Comment, ""Key"", LanguageCode, ResourceName, Text, IsTranlatedInValSuite, SystemEnum) 
                             VALUES 
                                 (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum)";
 
-                    AddParam(dataTable, c, "Comment");
-                    AddParam(dataTable, c, "Key");
-                    AddParam(dataTable, c, "LanguageCode");
-                    AddParam(dataTable, c, "ResourceName");
-                    AddParam(dataTable, c, "Text");
-                    AddParam(dataTable, c, "IsTranlatedInValSuite");
-                    AddParam(dataTable, c, "SystemEnum");
-
+                        AddParam(row, c, "Comment", DbType.String);
+                        AddParam(row, c, "Key", DbType.String);
+                        AddParam(row, c, "LanguageCode", DbType.String);
+                        AddParam(row, c, "ResourceName", DbType.String);
+                        AddParam(row, c, "Text", DbType.String);
+                        AddParam(row, c, "IsTranlatedInValSuite", DbType.Boolean);
+                        AddParam(row, c, "SystemEnum", DbType.Int32);
+                        s.BatchCommands.Add(c);
+                    }
                     try
                     {
-                        await DBCon.ThreadSafeAsyncFunction((s) => { 
-                                var t = s.BeginTransaction();
-                                
-                                t.Commit();
-                            });
+                        await DBCon.ThreadSafeAsyncFunction((_) => {
+                            s.ExecuteNonQuery();
+                        });
                     }
-                    catch
+                    catch (Exception)
                     {
                         batchFailed = true;
                     }
-                    /*
-                    using SqlBulkCopy dbBatch = new(sqlCon);
-                    dbBatch.DestinationTableName = "Translation";
-                    try
-                    {
-                        await DBCon.ThreadSafeAsyncFunction((s) => { dbBatch.WriteToServerAsync(dataTable); });
-                    }
-                    catch
-                    {
-                        batchFailed = true;
-                    }*/
                 }
                 else
                 {
@@ -275,11 +266,12 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private static void AddParam(DataTable dataTable, DbBatchCommand c, string name)
+        private static void AddParam(DataRow row, DbBatchCommand c, string name, DbType dbType)
         {
             var paramComment = c.CreateParameter();
             paramComment.ParameterName = "@" + name;
-            paramComment.Value = dataTable.Columns[name];
+            paramComment.Value = row[name];
+            paramComment.DbType = dbType;
             c.Parameters.Add(paramComment);
         }
 
