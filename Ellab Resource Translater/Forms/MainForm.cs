@@ -11,6 +11,7 @@ namespace Ellab_Resource_Translater
         private Settings? activeSetting;
         private int setup = 0;
         private bool batching = false;
+        private bool letConnectionDie = false;
         private DbConnectionExtension? dbConnection;
         private TranslationService? translationService;
         internal const string CONNECTION_SECRET = "EllabResourceTranslator:dbConnection";
@@ -59,6 +60,24 @@ namespace Ellab_Resource_Translater
                     try
                     {
                         await dbConnection.connection.OpenAsync();
+                        dbConnection.connection.StateChange += (s,d) =>
+                        {
+                            if (!letConnectionDie &&
+                                (d.CurrentState == System.Data.ConnectionState.Closed 
+                                || d.CurrentState == System.Data.ConnectionState.Broken)
+                            )
+                            {
+                                connectionStatus.Invoke(() => connectionStatus.Text = "DB Reconnecting...");
+                                Task.Delay(500).Wait();
+                                letConnectionDie = true;
+                                TryConnectDB();
+                                letConnectionDie = false;
+                            }
+                            else
+                            {
+                                connectionStatus.Invoke(() => connectionStatus.Text = "DB Disconnected");
+                            }
+                        };
                     }
                     catch (Exception ex)
                     {
@@ -151,8 +170,10 @@ namespace Ellab_Resource_Translater
         {
             if (dbConnection != null && dbConnection.connection.State != System.Data.ConnectionState.Closed)
             {
+                letConnectionDie = true;
                 dbConnection.connection.Close();
                 connectionStatus.Invoke(() => connectionStatus.Text = "Closed");
+                letConnectionDie = false;
             }
         }
 
@@ -199,21 +220,33 @@ namespace Ellab_Resource_Translater
             EMSuiteButton.Enabled = false;
             EMandValButton.Enabled = false;
 
-            await Task.Run(() => ValSuite_Init());
+            if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
+            {
+                await Task.Run(() => ValSuite_Init(translationService));
 
-            progressTitle.Invoke(() => progressTitle.Text = "Done");
+                progressTitle.Invoke(() => progressTitle.Text = "Done");
+            }
+            else
+            {
+                MessageBox.Show(@"Azure not connected, you can either:
+    1) Setup Azure in the Azure button at the buttom.
+    2) Disable AI Translation for all groups in Settings");
+            }
+
+    progressTitle.Invoke(() => progressTitle.Text = "Done");
             ValSuiteButton.Enabled = true;
             EMSuiteButton.Enabled = true;
             EMandValButton.Enabled = true;
         }
 
-        private void ValSuite_Init()
+        private void ValSuite_Init(TranslationService? transServ)
         {
             progressTitle.Invoke(() => progressTitle.Text = "Val Suite");
             var config = Config.Get();
             if (config.NotEMPath != "")
             {
-                Translators.ValSuite.Run(config.NotEMPath, config.languagesToTranslate, config.languagesToAiTranslate, progressListView, progressTracker);
+                Translators.ValSuite val = new(transServ, dbConnection);
+                val.Run(config.NotEMPath, progressListView, progressTracker);
             }
             else if (batching == true)
             {
@@ -280,11 +313,19 @@ namespace Ellab_Resource_Translater
             
             batching = true;
 
-            if (batching)
-                await Task.Run(() => EMSuite_Init(translationService));
-            if (batching) // in case we want to cancel after finding out EMsuite didn't have a value
-                await Task.Run(() => ValSuite_Init());
-
+            if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
+            {
+                if (batching)
+                    await Task.Run(() => EMSuite_Init(translationService));
+                if (batching) // in case we want to cancel after finding out EMsuite didn't have a value
+                    await Task.Run(() => ValSuite_Init(translationService));
+            }
+            else
+            {
+                MessageBox.Show(@"Azure not connected, you can either:
+    1) Setup Azure in the Azure button at the buttom.
+    2) Disable AI Translation for all groups in Settings");
+            }
             progressTitle.Invoke(() => progressTitle.Text = "Done");
             batching = false;
 

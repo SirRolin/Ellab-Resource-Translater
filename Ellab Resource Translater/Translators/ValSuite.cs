@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Ellab_Resource_Translater.Objects;
+using Ellab_Resource_Translater.Util;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,11 +8,11 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Translators
 {
-    internal class ValSuite
+    internal class ValSuite(TranslationService? translationService, DbConnectionExtension? DBCon) : DBProcessorBase(translationService, DBCon, 0, Config.Get().threadsToUse)
     {
-        internal static void Run(string path, List<string> languages, List<string> AiLangs, ListView view, Label progresText)
+        internal void Run(string path, ListView view, Label progresText)
         {
-            throw new NotImplementedException();
+            Run(path, view, progresText, new(".*\\.resx"));
         }
     }
 }

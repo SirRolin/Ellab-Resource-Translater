@@ -4,7 +4,7 @@ using System.Diagnostics;
 
 namespace Ellab_Resource_Translater.Util
 {
-    internal class Config
+    public class Config
     {
         // Static variables to help functions
         private static readonly string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Ellab/ResourceTranslater/settings.json");
@@ -36,6 +36,7 @@ namespace Ellab_Resource_Translater.Util
         public string NotEMPath = "";
         public List<string> languagesToTranslate = [];
         public List<string> languagesToAiTranslate = [];
+        public int threadsToUse = 32;
 
         // Singleton instanciation accessed with Get()
         private static Config? instance;

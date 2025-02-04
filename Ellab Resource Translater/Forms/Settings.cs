@@ -75,6 +75,7 @@ namespace Ellab_Resource_Translater
 
             EMsuitePath.Text = config.EMPath;
             NotEmPath.Text = config.NotEMPath;
+            coresNumeric.Value = config.threadsToUse;
             setup--;
         }
 
@@ -99,6 +100,15 @@ namespace Ellab_Resource_Translater
                 return;
 
             Config.Get().NotEMPath = NotEmPath.Text;
+        }
+
+        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        {
+            // While Loading I don't want this to run
+            if (setup > 0)
+                return;
+
+            Config.Get().threadsToUse = (int) coresNumeric.Value;
         }
     }
 }

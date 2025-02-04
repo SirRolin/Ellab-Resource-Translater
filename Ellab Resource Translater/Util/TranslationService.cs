@@ -10,9 +10,12 @@ namespace Ellab_Resource_Translater.Util
         private readonly TextTranslationClient _client = new(creds, uri, region);
         private readonly Uri _uri = uri;
 
-        public async Task<Azure.Response<IReadOnlyList<TranslatedTextItem>>> TranslateTextAsync(string[] texts, string targetLanguage)
+        public async Task<List<(string source, string[] translation)>> TranslateTextAsync(string[] texts, string targetLanguage)
         {
-            return await _client.TranslateAsync(targetLanguage: targetLanguage, content: texts, sourceLanguage: "en");
+            var response =  await _client.TranslateAsync(targetLanguage: targetLanguage, content: texts, sourceLanguage: "en");
+            return response.Value
+                .Select((translation, index) => (texts[index], translation.Translations.Select((x) => x.Text).ToArray())) // Pair source with translation
+                .ToList();
         }
 
         public async Task<bool> CanReachAzure()
