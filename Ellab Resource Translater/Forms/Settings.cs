@@ -39,10 +39,10 @@ namespace Ellab_Resource_Translater
 
         private void NotEmBrowse_Click(object sender, EventArgs e)
         {
-            var dialogResult = NotEmFBDialog.ShowDialog();
+            var dialogResult = ValFBDialog.ShowDialog();
             if (dialogResult == DialogResult.OK)
             {
-                NotEmPath.Text = NotEmFBDialog.SelectedPath;
+                ValPath.Text = ValFBDialog.SelectedPath;
             }
         }
 
@@ -74,7 +74,7 @@ namespace Ellab_Resource_Translater
                 );
 
             EMsuitePath.Text = config.EMPath;
-            NotEmPath.Text = config.ValPath;
+            ValPath.Text = config.ValPath;
             coresNumeric.Value = config.threadsToUse;
             setup--;
         }
@@ -99,7 +99,7 @@ namespace Ellab_Resource_Translater
             if (setup > 0)
                 return;
 
-            Config.Get().ValPath = NotEmPath.Text;
+            Config.Get().ValPath = ValPath.Text;
         }
 
         private void numericUpDown1_ValueChanged(object sender, EventArgs e)

@@ -33,14 +33,14 @@ namespace Ellab_Resource_Translater
         private void InitializeComponent()
         {
             EMsuiteFBDialog = new FolderBrowserDialog();
-            NotEmFBDialog = new FolderBrowserDialog();
+            ValFBDialog = new FolderBrowserDialog();
             LocationTablePanel = new TableLayoutPanel();
             EMSuiteText = new Label();
             EMsuitePath = new TextBox();
             EMsuiteFBButton = new Button();
-            NotEmText = new Label();
-            NotEmPath = new TextBox();
-            NotEmFBButton = new Button();
+            ValText = new Label();
+            ValPath = new TextBox();
+            ValFBButton = new Button();
             translationPanel = new Panel();
             translationLabel = new Label();
             translationCheckedListBox = new CheckedListBox();
@@ -57,7 +57,7 @@ namespace Ellab_Resource_Translater
             // 
             // NotEmFBDialog
             // 
-            NotEmFBDialog.AddToRecent = false;
+            ValFBDialog.AddToRecent = false;
             // 
             // LocationTablePanel
             // 
@@ -69,9 +69,9 @@ namespace Ellab_Resource_Translater
             LocationTablePanel.Controls.Add(EMSuiteText, 0, 0);
             LocationTablePanel.Controls.Add(EMsuitePath, 1, 0);
             LocationTablePanel.Controls.Add(EMsuiteFBButton, 2, 0);
-            LocationTablePanel.Controls.Add(NotEmText, 0, 1);
-            LocationTablePanel.Controls.Add(NotEmPath, 1, 1);
-            LocationTablePanel.Controls.Add(NotEmFBButton, 2, 1);
+            LocationTablePanel.Controls.Add(ValText, 0, 1);
+            LocationTablePanel.Controls.Add(ValPath, 1, 1);
+            LocationTablePanel.Controls.Add(ValFBButton, 2, 1);
             LocationTablePanel.Dock = DockStyle.Top;
             LocationTablePanel.Location = new Point(0, 0);
             LocationTablePanel.Margin = new Padding(15);
@@ -118,34 +118,34 @@ namespace Ellab_Resource_Translater
             // 
             // NotEmText
             // 
-            NotEmText.AutoSize = true;
-            NotEmText.Dock = DockStyle.Fill;
-            NotEmText.Location = new Point(18, 44);
-            NotEmText.Name = "NotEmText";
-            NotEmText.Size = new Size(96, 29);
-            NotEmText.TabIndex = 1;
-            NotEmText.Text = "ValSuite location";
-            NotEmText.TextAlign = ContentAlignment.MiddleCenter;
+            ValText.AutoSize = true;
+            ValText.Dock = DockStyle.Fill;
+            ValText.Location = new Point(18, 44);
+            ValText.Name = "NotEmText";
+            ValText.Size = new Size(96, 29);
+            ValText.TabIndex = 1;
+            ValText.Text = "ValSuite location";
+            ValText.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // NotEmPath
             // 
-            NotEmPath.Dock = DockStyle.Fill;
-            NotEmPath.Location = new Point(120, 47);
-            NotEmPath.Name = "NotEmPath";
-            NotEmPath.Size = new Size(415, 23);
-            NotEmPath.TabIndex = 3;
-            NotEmPath.TextChanged += NotEmPath_TextChanged;
+            ValPath.Dock = DockStyle.Fill;
+            ValPath.Location = new Point(120, 47);
+            ValPath.Name = "NotEmPath";
+            ValPath.Size = new Size(415, 23);
+            ValPath.TabIndex = 3;
+            ValPath.TextChanged += NotEmPath_TextChanged;
             // 
             // NotEmFBButton
             // 
-            NotEmFBButton.Dock = DockStyle.Right;
-            NotEmFBButton.Location = new Point(541, 47);
-            NotEmFBButton.Name = "NotEmFBButton";
-            NotEmFBButton.Size = new Size(65, 23);
-            NotEmFBButton.TabIndex = 4;
-            NotEmFBButton.Text = "...";
-            NotEmFBButton.UseVisualStyleBackColor = true;
-            NotEmFBButton.Click += NotEmBrowse_Click;
+            ValFBButton.Dock = DockStyle.Right;
+            ValFBButton.Location = new Point(541, 47);
+            ValFBButton.Name = "NotEmFBButton";
+            ValFBButton.Size = new Size(65, 23);
+            ValFBButton.TabIndex = 4;
+            ValFBButton.Text = "...";
+            ValFBButton.UseVisualStyleBackColor = true;
+            ValFBButton.Click += NotEmBrowse_Click;
             // 
             // translationPanel
             // 
@@ -256,11 +256,11 @@ namespace Ellab_Resource_Translater
         private Label EMSuiteText;
         private TextBox EMsuitePath;
         private Button EMsuiteFBButton;
-        private Label NotEmText;
-        private TextBox NotEmPath;
-        private Button NotEmFBButton;
+        private Label ValText;
+        private TextBox ValPath;
+        private Button ValFBButton;
         private FolderBrowserDialog EMsuiteFBDialog;
-        private FolderBrowserDialog NotEmFBDialog;
+        private FolderBrowserDialog ValFBDialog;
         private Panel translationPanel;
         private Label translationLabel;
         private CheckedListBox translationCheckedListBox;

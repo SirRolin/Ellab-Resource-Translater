@@ -1,6 +1,7 @@
 using Azure;
 using Ellab_Resource_Translater.Forms;
 using Ellab_Resource_Translater.Objects;
+using Ellab_Resource_Translater.Translators;
 using Ellab_Resource_Translater.Util;
 using Newtonsoft.Json;
 
@@ -60,10 +61,10 @@ namespace Ellab_Resource_Translater
                     try
                     {
                         await dbConnection.connection.OpenAsync();
-                        dbConnection.connection.StateChange += (s,d) =>
+                        dbConnection.connection.StateChange += (s, d) =>
                         {
                             if (!letConnectionDie &&
-                                (d.CurrentState == System.Data.ConnectionState.Closed 
+                                (d.CurrentState == System.Data.ConnectionState.Closed
                                 || d.CurrentState == System.Data.ConnectionState.Broken)
                             )
                             {
@@ -116,7 +117,8 @@ namespace Ellab_Resource_Translater
                         azureCreds = JsonConvert.DeserializeObject<AzureCredentials>(jsonCreds);
                     else
                     {
-                        AzureConnectionStatus.Invoke(() => {
+                        AzureConnectionStatus.Invoke(() =>
+                        {
                             AzureConnectionStatus.Text = "Azure, Need Credentials";
                             OpenAzureSetup();
                         });
@@ -125,13 +127,14 @@ namespace Ellab_Resource_Translater
                 }
                 catch
                 {
-                    AzureConnectionStatus.Invoke(() => {
+                    AzureConnectionStatus.Invoke(() =>
+                    {
                         AzureConnectionStatus.Text = "Azure, Error with stored Credentials";
                         OpenAzureSetup();
                     });
                     return;
                 }
-                
+
 
                 // Avoid trying to refresh while still connecting.
                 RefreshAzureButton.Invoke(() => RefreshAzureButton.Enabled = false);
@@ -215,10 +218,7 @@ namespace Ellab_Resource_Translater
 
         private async void ValSuite_Initiation(object sender, EventArgs e)
         {
-            // Disables the Buttons so that we don't Instantiate multiple tranlations at once
-            ValSuiteButton.Enabled = false;
-            EMSuiteButton.Enabled = false;
-            EMandValButton.Enabled = false;
+            ableControls(false);
 
             if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
             {
@@ -233,10 +233,8 @@ namespace Ellab_Resource_Translater
     2) Disable AI Translation for all groups in Settings");
             }
 
-    progressTitle.Invoke(() => progressTitle.Text = "Done");
-            ValSuiteButton.Enabled = true;
-            EMSuiteButton.Enabled = true;
-            EMandValButton.Enabled = true;
+            progressTitle.Invoke(() => progressTitle.Text = "Done");
+            ableControls(true);
         }
 
         private void ValSuite_Init(TranslationService? transServ)
@@ -261,12 +259,9 @@ namespace Ellab_Resource_Translater
 
         private async void EMSuite_Initiation(object sender, EventArgs e)
         {
-            // Disables the Buttons so that we don't Instantiate multiple tranlations at once
-            ValSuiteButton.Enabled = false;
-            EMSuiteButton.Enabled = false;
-            EMandValButton.Enabled = false;
+            ableControls(false);
 
-            if(Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
+            if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
             {
                 await Task.Run(() => EMSuite_Init(translationService));
 
@@ -279,9 +274,25 @@ namespace Ellab_Resource_Translater
     2) Disable AI Translation for all groups in Settings");
             }
 
-            ValSuiteButton.Enabled = true;
-            EMSuiteButton.Enabled = true;
-            EMandValButton.Enabled = true;
+            ableControls(true);
+        }
+
+        /// <summary>
+        /// Disables the Buttons so that we don't Instantiate multiple tranlations at once
+        /// </summary>
+        /// <param name="enable">enabled or not - reversed for Cancel button.</param>
+        private void ableControls(bool enable)
+        {
+            ValSuiteButton.Enabled = enable;
+            EMSuiteButton.Enabled = enable;
+            EMandValButton.Enabled = enable;
+            SettingsButton.Enabled = enable;
+            DBConnectionSetup.Enabled = enable;
+            AzureSettingsSetup.Enabled = enable;
+            RefreshAzureButton.Enabled = enable;
+            RefreshConnectionButton.Enabled = enable;
+            translationCheckedListBox.Enabled = enable;
+            CancellationButton.Enabled = !enable;
         }
 
         private void EMSuite_Init(TranslationService? transServ)
@@ -306,11 +317,8 @@ namespace Ellab_Resource_Translater
 
         private async void EMandValButton_Click(object sender, EventArgs e)
         {
-            // Disables the Buttons so that we don't Instantiate multiple tranlations at once
-            ValSuiteButton.Enabled = false;
-            EMSuiteButton.Enabled = false;
-            EMandValButton.Enabled = false;
-            
+            ableControls(false);
+
             batching = true;
 
             if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
@@ -329,9 +337,7 @@ namespace Ellab_Resource_Translater
             progressTitle.Invoke(() => progressTitle.Text = "Done");
             batching = false;
 
-            ValSuiteButton.Enabled = true;
-            EMSuiteButton.Enabled = true;
-            EMandValButton.Enabled = true;
+            ableControls(true);
         }
 
         private void DBConnectionSetup_Click(object sender, EventArgs e)
@@ -359,6 +365,11 @@ namespace Ellab_Resource_Translater
         private void RefreshAzureButton_Click(object sender, EventArgs e)
         {
             TryConnectAzure();
+        }
+
+        private void CancellationButton_Click(object sender, EventArgs e)
+        {
+            DBProcessorBase.cancel = true;
         }
     }
 }

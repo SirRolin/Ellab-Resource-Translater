@@ -1,4 +1,5 @@
-﻿using Azure.AI.Translation.Text;
+﻿using Azure;
+using Azure.AI.Translation.Text;
 using Ellab_Resource_Translater.objects;
 using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Util;
@@ -20,8 +21,12 @@ namespace Ellab_Resource_Translater.Translators
         private readonly TranslationService? TranslationService = translationService;
         private readonly Config config = Config.Get();
 
+        public static bool cancel = false;
+
         internal void Run(string path, ListView view, Label progresText, Regex regex)
         {
+            cancel = false;
+
             // Tracks resources done - Starts at -1 so that we can call it to get the right format to start with.
             int currentProcessed = -1;
             var allResources = Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories).ToHashSet();
@@ -64,13 +69,21 @@ namespace Ellab_Resource_Translater.Translators
         private void ProcessQueue(int pathLength, ConcurrentQueue<string> queue, HashSet<string> existingResources, Action update, ListView listView)
         {
             ListViewItem listViewItem;
-            while (true)
+            while (!cancel)
             {
                 if (queue.TryDequeue(out var resource))
                 {
                     string shortenedPath = resource[(pathLength + 1)..]; // Remove the root path
                     listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
-                    TranslateResource(existingResources, resource).Wait();
+                    try
+                    {
+                        TranslateResource(existingResources, resource).Wait();
+                    } catch (AggregateException _)
+                    {
+                        if (!cancel)
+                            MessageBox.Show("Translations used up for now. Try again later.");
+                        cancel = true;
+                    }
                     listView.Invoke(() => listView.Items.Remove(listViewItem));
                     update.Invoke();
                 }
@@ -193,25 +206,24 @@ namespace Ellab_Resource_Translater.Translators
             // Get missing translation values in english as a Reverse Dictionary
             // Filter so we don't get errors
             // GroupBy so that dublicate values doesn't break as it becomes a key
+            // Another Filter to remove the once that doesn't have a text in english (can't translate empty string)
             Dictionary<string, Translation[]> kvp = emptyTranslations.Where(x => translations["EN"].ContainsKey(x.key))
                 .GroupBy(x => translations["EN"][x.key].value, x => x)
+                .Where(k => !k.Key.Equals(string.Empty))
                 .ToDictionary(g => g.Key, g => g.ToArray());
-
-
-            // To Do Fix the random empty strings that's introduced by some strings
 
 
             string[] textsToTranslate = [.. kvp.Keys];
             if (textsToTranslate.Length > 0 && TranslationService != null)
             {
                 var response = TranslationService.TranslateTextAsync(textsToTranslate, lang).Result;
-                foreach (var item in response)
+                foreach (var (source, translation) in response)
                 {
-                    var itemST = item.source;
-                    foreach (var s in kvp.Where(x => itemST.Equals(x.Key)).Select(x => x.Value).First())
+                    var itemST = source;
+                    var transes = kvp[itemST];
+                    foreach (Translation transItem in transes)
                     {
-                        Translation transItem = translations[lang][s.key];
-                        string? text = item.translation[0] ?? null;
+                        string? text = translation[0] ?? null;
                         if (text != null)
                         {
                             transItem.value = text;
