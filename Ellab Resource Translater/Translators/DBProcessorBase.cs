@@ -70,7 +70,7 @@ namespace Ellab_Resource_Translater.Translators
                 {
                     string shortenedPath = resource[(pathLength + 1)..]; // Remove the root path
                     listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
-                    TranslateResource(existingResources, resource);
+                    TranslateResource(existingResources, resource).Wait();
                     listView.Invoke(() => listView.Items.Remove(listViewItem));
                     update.Invoke();
                 }
@@ -141,24 +141,32 @@ namespace Ellab_Resource_Translater.Translators
                 using ResXResourceReader resxCommentReader = new(path);
                 // Switches to reading metaData instead of values, can't have both, which we need for comments
                 resxCommentReader.UseResXDataNodes = true;
-                var enumerator = resxCommentReader.GetEnumerator();
 
-                foreach (DictionaryEntry entry in resxReader)
+                // Found out that some files are simply broken which will cause this to throw an error when it reaches the end of the file.
+                try
                 {
-                    string key = entry.Key.ToString() ?? string.Empty;
-                    string value = entry.Value?.ToString() ?? string.Empty;
-                    string comment;
+                    var enumerator = resxCommentReader.GetEnumerator();
 
-                    // Since we have 2 readers of the same File, we can iterate over them synced by calling MoveNext only once per loop
-                    if (enumerator.MoveNext())
+                    foreach (DictionaryEntry entry in resxReader)
                     {
-                        ResXDataNode? current = (ResXDataNode?)((DictionaryEntry)enumerator.Current).Value;
-                        comment = current?.Comment ?? string.Empty;
-                    }
-                    else 
-                        comment = string.Empty; 
+                        string key = entry.Key.ToString() ?? string.Empty;
+                        string value = entry.Value?.ToString() ?? string.Empty;
+                        string comment;
 
-                    trans.Add(key, new Translation(key, value, comment));
+                        // Since we have 2 readers of the same File, we can iterate over them synced by calling MoveNext only once per loop
+                        if (enumerator.MoveNext())
+                        {
+                            ResXDataNode? current = (ResXDataNode?)((DictionaryEntry)enumerator.Current).Value;
+                            comment = current?.Comment ?? string.Empty;
+                        }
+                        else 
+                            comment = string.Empty; 
+
+                        trans.Add(key, new Translation(key, value, comment));
+                    }
+                }
+                catch
+                {
                 }
             }
             return trans;
@@ -219,7 +227,7 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private async void TranslateResource(HashSet<string> existing, string resource)
+        private async Task TranslateResource(HashSet<string> existing, string resource)
         {
             // To store the Data in each language.
             Dictionary<string, Dictionary<string, Translation>> translations = [];
@@ -303,15 +311,23 @@ namespace Ellab_Resource_Translater.Translators
                         AddParam(row, c, "SystemEnum", DbType.Int32);
                         s.BatchCommands.Add(c);
                     }
-                    try
+                    // Sometimes there's nothing to upload
+                    if(s.BatchCommands.Count > 0)
                     {
-                        await DBCon.ThreadSafeAsyncFunction((_) => {
-                            s.ExecuteNonQuery();
-                        });
-                    }
-                    catch (Exception)
+                        try 
+                        {
+                            await DBCon.ThreadSafeAsyncFunction((_) =>
+                            {
+                                s.ExecuteNonQuery();
+                            });
+                        }
+                        catch (Exception)
+                        {
+                            batchFailed = true;
+                        }
+                    } else
                     {
-                        batchFailed = true;
+                        s.Cancel();
                     }
                 }
                 else
