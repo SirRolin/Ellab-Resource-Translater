@@ -33,7 +33,7 @@ namespace Ellab_Resource_Translater.Util
 
         // Local Variables (The once being saved)
         public string EMPath = "";
-        public string NotEMPath = "";
+        public string ValPath = "";
         public List<string> languagesToTranslate = [];
         public List<string> languagesToAiTranslate = [];
         public int threadsToUse = 32;
@@ -51,12 +51,13 @@ namespace Ellab_Resource_Translater.Util
             return this;
         }
         [JsonConstructor]
-        public Config(string eMPath, string notEMPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate)
+        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse)
         {
-            EMPath = eMPath;
-            NotEMPath = notEMPath;
+            this.EMPath = eMPath;
+            this.ValPath = ValPath;
             this.languagesToTranslate = languagesToTranslate;
             this.languagesToAiTranslate = languagesToAiTranslate;
+            this.threadsToUse = threadsToUse;
         }
 
 

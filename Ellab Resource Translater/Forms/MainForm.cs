@@ -243,10 +243,10 @@ namespace Ellab_Resource_Translater
         {
             progressTitle.Invoke(() => progressTitle.Text = "Val Suite");
             var config = Config.Get();
-            if (config.NotEMPath != "")
+            if (config.ValPath != "")
             {
                 Translators.ValSuite val = new(transServ, dbConnection);
-                val.Run(config.NotEMPath, progressListView, progressTracker);
+                val.Run(config.ValPath, progressListView, progressTracker);
             }
             else if (batching == true)
             {

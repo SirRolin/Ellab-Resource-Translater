@@ -20,7 +20,7 @@ namespace Ellab_Resource_Translater.Translators
     {
         internal void Run(string path, ListView view, Label progresText)
         {
-            Run(path, view, progresText, new(".*\\\\Resources\\\\.*(?<!\\...)\\.resx"));
+            Run(path, view, progresText, new(@".*\\Resources\\.*(?<!\..{0,5})\.resx"));
         }
     }
 }
