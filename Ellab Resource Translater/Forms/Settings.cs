@@ -7,6 +7,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -21,11 +22,6 @@ namespace Ellab_Resource_Translater
         public Settings()
         {
             InitializeComponent();
-            this.Size = Config.Get().SettingWindowSize;
-            this.ClientSizeChanged += (s, e) =>
-            {
-                Config.Get().SettingWindowSize = this.Size;
-            };
             this.FormClosed += Settings_Exit;
         }
 
@@ -82,6 +78,7 @@ namespace Ellab_Resource_Translater
             EMsuitePath.Text = config.EMPath;
             ValPath.Text = config.ValPath;
             coresNumeric.Value = config.threadsToUse;
+            Config.AssignSizeSetting(this, (s) => config.SettingWindowSize = s, this.Size);
             setup--;
         }
 

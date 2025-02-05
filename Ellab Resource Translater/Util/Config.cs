@@ -113,5 +113,13 @@ namespace Ellab_Resource_Translater.Util
             }
         }
 
+        public static void AssignSizeSetting<T>(T window, Action<Size> settingSize, Size size) where T : Form
+        {
+            window.Size = size;
+            window.ClientSizeChanged += (s, e) =>
+            {
+                settingSize.Invoke(window.Size);
+            };
+        }
     }
 }

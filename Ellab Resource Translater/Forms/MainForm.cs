@@ -37,11 +37,7 @@ namespace Ellab_Resource_Translater
 
             TryConnectDB();
             TryConnectAzure();
-            this.Size = config.MainWindowSize;
-            this.ClientSizeChanged += (s, e) =>
-            {
-                config.MainWindowSize = this.Size;
-            };
+            Config.AssignSizeSetting(this, (s) => config.MainWindowSize = s, config.MainWindowSize);
             setup--;
         }
 
