@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static Org.BouncyCastle.Math.EC.ECCurve;
 using Config = Ellab_Resource_Translater.Util.Config;
 
 namespace Ellab_Resource_Translater
@@ -20,6 +21,11 @@ namespace Ellab_Resource_Translater
         public Settings()
         {
             InitializeComponent();
+            this.Size = Config.Get().SettingWindowSize;
+            this.ClientSizeChanged += (s, e) =>
+            {
+                Config.Get().SettingWindowSize = this.Size;
+            };
             this.FormClosed += Settings_Exit;
         }
 

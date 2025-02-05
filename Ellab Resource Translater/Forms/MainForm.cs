@@ -37,6 +37,11 @@ namespace Ellab_Resource_Translater
 
             TryConnectDB();
             TryConnectAzure();
+            this.Size = config.MainWindowSize;
+            this.ClientSizeChanged += (s, e) =>
+            {
+                config.MainWindowSize = this.Size;
+            };
             setup--;
         }
 
@@ -180,7 +185,7 @@ namespace Ellab_Resource_Translater
             }
         }
 
-        private void Form1_Closed(object sender, EventArgs e)
+        private void MainForm_Closed(object sender, EventArgs e)
         {
             Config.Save();
             TryCloseDBConnection();

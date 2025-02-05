@@ -37,6 +37,8 @@ namespace Ellab_Resource_Translater.Util
         public List<string> languagesToTranslate = [];
         public List<string> languagesToAiTranslate = [];
         public int threadsToUse = 32;
+        public Size MainWindowSize = new(900, 650);
+        public Size SettingWindowSize = new(600, 400);
 
         // Singleton instanciation accessed with Get()
         private static Config? instance;
@@ -51,13 +53,15 @@ namespace Ellab_Resource_Translater.Util
             return this;
         }
         [JsonConstructor]
-        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse)
+        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse, Size? MainWindowSize, Size? SettingWindowSize)
         {
             this.EMPath = eMPath;
             this.ValPath = ValPath;
             this.languagesToTranslate = languagesToTranslate;
             this.languagesToAiTranslate = languagesToAiTranslate;
             this.threadsToUse = threadsToUse;
+            this.MainWindowSize = MainWindowSize ?? new(900, 650); ;
+            this.SettingWindowSize = SettingWindowSize ?? new(600, 400);
         }
 
 

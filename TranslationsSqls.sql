@@ -1,12 +1,12 @@
 ﻿
-/* See EMSuite entries */
-/*select * from Translation where SystemEnum = 1;*/
+--  See EMSuite entries
+-- select * from Translation where SystemEnum = 1;
 
 
-/* See Valsuite entries */
-/*select * from Translation where SystemEnum = 0;*/
+-- See Valsuite entries 
+--select * from Translation where SystemEnum = 0;
 
-/* Delete Duplicates */
+-- Duplicates
 /*
 WITH added_row_number AS (
   SELECT
@@ -14,7 +14,12 @@ WITH added_row_number AS (
     ROW_NUMBER() OVER(PARTITION BY "Key" + LanguageCode + ResourceName ORDER BY ID ASC) AS row_number
   FROM Translation
 )
-SELECT
-  *
+select *
 FROM added_row_number
-WHERE row_number <> 1;*/
+WHERE row_number <> 1;
+*/
+
+-- Delete All 
+-- Delete from Translation;
+
+

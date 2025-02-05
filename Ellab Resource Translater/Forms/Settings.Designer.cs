@@ -55,7 +55,7 @@ namespace Ellab_Resource_Translater
             ((System.ComponentModel.ISupportInitialize)coresNumeric).BeginInit();
             SuspendLayout();
             // 
-            // NotEmFBDialog
+            // ValFBDialog
             // 
             ValFBDialog.AddToRecent = false;
             // 
@@ -82,7 +82,7 @@ namespace Ellab_Resource_Translater
             LocationTablePanel.RowStyles.Add(new RowStyle());
             LocationTablePanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
             LocationTablePanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 20F));
-            LocationTablePanel.Size = new Size(624, 88);
+            LocationTablePanel.Size = new Size(584, 88);
             LocationTablePanel.TabIndex = 4;
             // 
             // EMSuiteText
@@ -101,14 +101,14 @@ namespace Ellab_Resource_Translater
             EMsuitePath.Dock = DockStyle.Fill;
             EMsuitePath.Location = new Point(120, 18);
             EMsuitePath.Name = "EMsuitePath";
-            EMsuitePath.Size = new Size(415, 23);
+            EMsuitePath.Size = new Size(375, 23);
             EMsuitePath.TabIndex = 0;
             EMsuitePath.TextChanged += EMsuitePath_TextChanged;
             // 
             // EMsuiteFBButton
             // 
             EMsuiteFBButton.Dock = DockStyle.Right;
-            EMsuiteFBButton.Location = new Point(541, 18);
+            EMsuiteFBButton.Location = new Point(501, 18);
             EMsuiteFBButton.Name = "EMsuiteFBButton";
             EMsuiteFBButton.Size = new Size(65, 23);
             EMsuiteFBButton.TabIndex = 2;
@@ -116,31 +116,31 @@ namespace Ellab_Resource_Translater
             EMsuiteFBButton.UseVisualStyleBackColor = true;
             EMsuiteFBButton.Click += EMsuiteBrowse_Click;
             // 
-            // NotEmText
+            // ValText
             // 
             ValText.AutoSize = true;
             ValText.Dock = DockStyle.Fill;
             ValText.Location = new Point(18, 44);
-            ValText.Name = "NotEmText";
+            ValText.Name = "ValText";
             ValText.Size = new Size(96, 29);
             ValText.TabIndex = 1;
             ValText.Text = "ValSuite location";
             ValText.TextAlign = ContentAlignment.MiddleCenter;
             // 
-            // NotEmPath
+            // ValPath
             // 
             ValPath.Dock = DockStyle.Fill;
             ValPath.Location = new Point(120, 47);
-            ValPath.Name = "NotEmPath";
-            ValPath.Size = new Size(415, 23);
+            ValPath.Name = "ValPath";
+            ValPath.Size = new Size(375, 23);
             ValPath.TabIndex = 3;
             ValPath.TextChanged += NotEmPath_TextChanged;
             // 
-            // NotEmFBButton
+            // ValFBButton
             // 
             ValFBButton.Dock = DockStyle.Right;
-            ValFBButton.Location = new Point(541, 47);
-            ValFBButton.Name = "NotEmFBButton";
+            ValFBButton.Location = new Point(501, 47);
+            ValFBButton.Name = "ValFBButton";
             ValFBButton.Size = new Size(65, 23);
             ValFBButton.TabIndex = 4;
             ValFBButton.Text = "...";
@@ -190,9 +190,10 @@ namespace Ellab_Resource_Translater
             flowLayoutPanel1.Controls.Add(translationPanel);
             flowLayoutPanel1.Controls.Add(panel1);
             flowLayoutPanel1.Dock = DockStyle.Fill;
+            flowLayoutPanel1.FlowDirection = FlowDirection.TopDown;
             flowLayoutPanel1.Location = new Point(0, 88);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
-            flowLayoutPanel1.Size = new Size(624, 465);
+            flowLayoutPanel1.Size = new Size(584, 273);
             flowLayoutPanel1.TabIndex = 5;
             // 
             // panel1
@@ -233,7 +234,7 @@ namespace Ellab_Resource_Translater
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(624, 553);
+            ClientSize = new Size(584, 361);
             Controls.Add(flowLayoutPanel1);
             Controls.Add(LocationTablePanel);
             Name = "Settings";
