@@ -7,6 +7,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Resources;
 using System.Text.RegularExpressions;
 
@@ -77,12 +78,15 @@ namespace Ellab_Resource_Translater.Translators
                     listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
                     try
                     {
-                        TranslateResource(existingResources, resource).Wait();
-                    } catch (AggregateException _)
+                        TranslateResource(existingResources, resource, pathLength).Wait();
+                    } catch (AggregateException ae)
                     {
                         if (!cancel)
-                            MessageBox.Show("Translations used up for now. Try again later.");
-                        cancel = true;
+                        {
+                            cancel = true;
+                            Debug.WriteLine(ae.Message);
+                            MessageBox.Show("Translations used up for now. Try again later."); 
+                        }
                     }
                     listView.Invoke(() => listView.Items.Remove(listViewItem));
                     update.Invoke();
@@ -110,7 +114,7 @@ namespace Ellab_Resource_Translater.Translators
             c.Parameters.Add(paramComment);
         }
 
-        private static DataTable CreateDataTable(string resource, Dictionary<string, Dictionary<string, Translation>> translations, int systemEnum)
+        private static DataTable CreateDataTable(int pathLength, string resource, Dictionary<string, Dictionary<string, Translation>> translations, int systemEnum)
         {
             DataTable dataTable = new();
             dataTable.Columns.Add("ID", typeof(long));
@@ -124,7 +128,7 @@ namespace Ellab_Resource_Translater.Translators
             foreach (var item in translations)
             {
                 string language = item.Key;
-                string resourceName = Path.GetFileName(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"));
+                string resourceName = Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx")[(pathLength + 1)..];
                 foreach (var value in item.Value)
                 {
                     string comment = value.Value.comment;
@@ -159,7 +163,6 @@ namespace Ellab_Resource_Translater.Translators
                 try
                 {
                     var enumerator = resxCommentReader.GetEnumerator();
-
                     foreach (DictionaryEntry entry in resxReader)
                     {
                         string key = entry.Key.ToString() ?? string.Empty;
@@ -190,7 +193,11 @@ namespace Ellab_Resource_Translater.Translators
             using ResXResourceWriter resxWriter = new(path);
             foreach (var entry in trans)
             {
-                resxWriter.AddResource(entry.Key, entry.Value.value);
+                ResXDataNode node = new(entry.Key, entry.Value.value)
+                {
+                    Comment = entry.Value.comment
+                };
+                resxWriter.AddResource(node);
             }
         }
 
@@ -200,7 +207,7 @@ namespace Ellab_Resource_Translater.Translators
             List<Translation> emptyTranslations = translations[lang].Values.Where(x => x.value == string.Empty).ToList();
 
             // Nothing to translate? return
-            if (emptyTranslations.Count == 0)
+            if (emptyTranslations.Count == 0 || TranslationService != null)
                 return;
 
             // Get missing translation values in english as a Reverse Dictionary
@@ -239,7 +246,7 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private async Task TranslateResource(HashSet<string> existing, string resource)
+        private async Task TranslateResource(HashSet<string> existing, string resource, int pathLength)
         {
             // To store the Data in each language.
             Dictionary<string, Dictionary<string, Translation>> translations = [];
@@ -289,14 +296,14 @@ namespace Ellab_Resource_Translater.Translators
             }
 
             // Try to write to the Database
-            await WriteToDatabase(resource, translations);
+            await WriteToDatabase(pathLength, resource, translations);
         }
 
-        private async Task WriteToDatabase(string resource, Dictionary<string, Dictionary<string, Translation>> translations)
+        private async Task WriteToDatabase(int pathLength, string resource, Dictionary<string, Dictionary<string, Translation>> translations)
         {
             if (DBCon != null)
             {
-                DataTable dataTable = CreateDataTable(resource, translations, systemEnum);
+                DataTable dataTable = CreateDataTable(pathLength, resource, translations, systemEnum);
 
                 bool batchFailed = false;
                 // Upload to the Database
