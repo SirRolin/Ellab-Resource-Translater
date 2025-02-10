@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ellab_Resource_Translater.objects
+namespace Ellab_Resource_Translater.Objects
 {
     internal class Translation(string key, string value, string comment)
     {

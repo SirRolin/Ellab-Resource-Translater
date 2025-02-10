@@ -1,12 +1,14 @@
-﻿using System;
+﻿using MySqlX.XDevAPI.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Util
 {
-    internal class RolinsFormUtils
+    internal class FormUtils
     {
         public static void SaveCheckBoxListLocalised(List<string> list, CheckedListBox checkedListBox, Dictionary<string, string> localiser)
         {
@@ -41,6 +43,43 @@ namespace Ellab_Resource_Translater.Util
             var width = checkedListBox.Width * 
                 (checkedListBox.MaximumSize.Height <= 0 ? 1 : (height / checkedListBox.MaximumSize.Height));
             checkedListBox.Size = new System.Drawing.Size(width, height);
+        }
+        public static void HandleProcess(Action update, ListView listView, string resourceName, Action process)
+        {
+            HandleProcess((s) => s, update, listView, resourceName, process);
+        }
+
+        public static void HandleProcess(int pathLength, Action update, ListView listView, string resourceName, Action process)
+        {
+            HandleProcess(pathLength, update, listView, resourceName, () => { process(); return string.Empty; });
+        }
+
+        public static void HandleProcess(Func<string, string> getResource, Action update, ListView listView, string resourceName, Action process)
+        {
+            HandleProcess(getResource, update, listView, resourceName, () => { process(); return string.Empty; });
+        }
+
+        public static TResult HandleProcess<TResult>(int pathLength, Action update, ListView listView, string resourceName, Func<TResult> process)
+        {
+            return HandleProcess((s) => s[(pathLength+1)..], update, listView, resourceName, process);
+        }
+
+        public static TResult HandleProcess<TResult>(Func<string, string> getResource, Action update, ListView listView, string resourceName, Func<TResult> process)
+        {
+            string shortenedPath = getResource(resourceName); // Remove the root path
+            ListViewItem listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
+
+            var output = process();
+
+            listView.Invoke(() => listView.Items.Remove(listViewItem));
+            update.Invoke();
+
+            return output;
+        }
+
+        public static void LabelTextUpdater(Label label, params object[] texts)
+        {
+            label.Invoke(() => label.Text = string.Concat(texts));
         }
     }
 }

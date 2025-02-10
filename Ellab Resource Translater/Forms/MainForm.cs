@@ -4,6 +4,8 @@ using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Translators;
 using Ellab_Resource_Translater.Util;
 using Newtonsoft.Json;
+using System.Data;
+using System.Threading;
 
 namespace Ellab_Resource_Translater
 {
@@ -12,14 +14,25 @@ namespace Ellab_Resource_Translater
         private Settings? activeSetting;
         private int setup = 0;
         private bool batching = false;
-        private bool letConnectionDie = false;
-        private DbConnectionExtension? dbConnection;
+        private ConnectionProvider? connProv;
         private TranslationService? translationService;
         internal const string CONNECTION_SECRET = "EllabResourceTranslator:dbConnection";
         internal const string AZURE_SECRET = "EllabResourceTranslator:azure";
+        private CancellationTokenSource? cancelTSource;
+
+        private string connectionStringState = "";
+        private Task connectionStringUpdater;
+
         public MainForm()
         {
             InitializeComponent();
+            connectionStringUpdater = new Task(() => {
+                while (!IsDisposed)
+                {
+                    connectionStatus.Invoke(() => connectionStatus.Text = string.Concat("DB ", connectionStringState));
+                    Task.Delay(500).Wait();
+                }
+            });
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -29,7 +42,7 @@ namespace Ellab_Resource_Translater
             var checkitems = config.languagesToTranslate;
 
             setup++;
-            RolinsFormUtils.LoadCheckboxListLocalised(
+            FormUtils.LoadCheckboxListLocalised(
                 list: checkitems,
                 checkedListBox: translationCheckedListBox,
                 localiser: languagePairs
@@ -39,65 +52,50 @@ namespace Ellab_Resource_Translater
             TryConnectAzure();
             Config.AssignSizeSetting(this, (s) => config.MainWindowSize = s, config.MainWindowSize);
             setup--;
+
+            connectionStringUpdater.Start();
         }
 
         public Task TryConnectDB()
         {
             return Task.Run(async () =>
             {
-                TryCloseDBConnection();
+                // Avoid trying to refresh while still connecting.
+                RefreshConnectionButton.Invoke(() => RefreshConnectionButton.Enabled = false);
 
-                string? dbConn = SecretManager.GetUserSecret(CONNECTION_SECRET);
+                // cleanup
+                connProv?.Dispose();
+
+                string? connString = SecretManager.GetUserSecret(CONNECTION_SECRET);
 
                 // Debugging
                 //RefreshConnectionButton.Invoke(() => MessageBox.Show(dbConn.Replace(";", ";\n")));
 
-                // Avoid trying to refresh while still connecting.
-                RefreshConnectionButton.Invoke(() => RefreshConnectionButton.Enabled = false);
 
-                if (dbConn != null)
+                if (connString != null)
                 {
-                    dbConnection = new(DBStringHandler.CreateDbConnection(dbConn), dbConn);
-                    connectionStatus.Invoke(() => connectionStatus.Text = "DB Connecting...");
+                    connProv = new(connString);
+                    connectionStringState = "Test...";
                     try
                     {
-                        await dbConnection.connection.OpenAsync();
-                        dbConnection.connection.StateChange += (s, d) =>
+                        using System.Data.Common.DbConnection conn = connProv.Get().conn;
+                        await conn.OpenAsync();
+                        if (conn.State == System.Data.ConnectionState.Open)
                         {
-                            if (!letConnectionDie &&
-                                (d.CurrentState == System.Data.ConnectionState.Closed
-                                || d.CurrentState == System.Data.ConnectionState.Broken)
-                            )
-                            {
-                                connectionStatus.Invoke(() => connectionStatus.Text = "DB Reconnecting...");
-                                Task.Delay(500).Wait();
-                                letConnectionDie = true;
-                                TryConnectDB();
-                                letConnectionDie = false;
-                            }
-                            else
-                            {
-                                connectionStatus.Invoke(() => connectionStatus.Text = "DB Disconnected");
-                            }
-                        };
+                            connectionStringState = "Can Connect";
+                        }
+                        await conn.CloseAsync();
                     }
                     catch (Exception ex)
                     {
-                        connectionStatus.Invoke(() => connectionStatus.Text = ex.Message);
+                        connectionStringState = ex.Message;
                         return;
-                    }
-                    if (dbConnection.connection.State == System.Data.ConnectionState.Open)
-                    {
-                        connectionStatus.Invoke(() => connectionStatus.Text = "DB Connected");
                     }
                     return;
                 }
                 else
                 {
-                    connectionStatus.Invoke(() =>
-                    {
-                        connectionStatus.Text = "DB, Need Connection String - Try Setup";
-                    });
+                    connectionStringState = "Need Setup:";
                 }
 
                 // Reenabling the refresh
@@ -170,21 +168,10 @@ namespace Ellab_Resource_Translater
             });
         }
 
-        private void TryCloseDBConnection()
-        {
-            if (dbConnection != null && dbConnection.connection.State != System.Data.ConnectionState.Closed)
-            {
-                letConnectionDie = true;
-                dbConnection.connection.Close();
-                connectionStatus.Invoke(() => connectionStatus.Text = "Closed");
-                letConnectionDie = false;
-            }
-        }
-
         private void MainForm_Closed(object sender, EventArgs e)
         {
+            connProv?.Dispose();
             Config.Save();
-            TryCloseDBConnection();
         }
 
         private void SettingsButton_Click(object sender, EventArgs e)
@@ -210,7 +197,7 @@ namespace Ellab_Resource_Translater
             var config = Config.Get();
             var languagePairs = Config.DefaultLanguages();
 
-            RolinsFormUtils.SaveCheckBoxListLocalised(
+            FormUtils.SaveCheckBoxListLocalised(
                 list: config.languagesToTranslate,
                 checkedListBox: translationCheckedListBox,
                 localiser: languagePairs);
@@ -219,13 +206,17 @@ namespace Ellab_Resource_Translater
 
         private async void ValSuite_Initiation(object sender, EventArgs e)
         {
-            ableControls(false);
+            AbleControls(false);
 
             if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
             {
-                await Task.Run(() => ValSuite_Init(translationService));
+                cancelTSource = new CancellationTokenSource();
 
-                progressTitle.Invoke(() => progressTitle.Text = "Done");
+                await Task.Run(() => ValSuite_Init(translationService, cancelTSource));
+
+                progressTitle.Invoke(() => progressTitle.Text = cancelTSource.IsCancellationRequested ? "Request Cancelled" : "Request Done");
+
+                cancelTSource.Dispose();
             }
             else
             {
@@ -233,24 +224,22 @@ namespace Ellab_Resource_Translater
     1) Setup Azure in the Azure button at the buttom.
     2) Disable AI Translation for all groups in Settings");
             }
-
-            progressTitle.Invoke(() => progressTitle.Text = "Done");
-            ableControls(true);
+            AbleControls(true);
         }
 
-        private void ValSuite_Init(TranslationService? transServ)
+        private void ValSuite_Init(TranslationService? transServ, CancellationTokenSource source)
         {
             progressTitle.Invoke(() => progressTitle.Text = "Val Suite");
             var config = Config.Get();
             if (config.ValPath != "")
             {
-                Translators.ValSuite val = new(transServ, dbConnection);
+                ValSuite val = new(transServ, connProv, source);
                 val.Run(config.ValPath, progressListView, progressTracker);
             }
             else if (batching == true)
             {
                 DialogResult shouldWeContinue = MessageBox.Show("Check ValSuite path in Settings.\nShould we continue with the rest?", "Val suite Path Missing!", MessageBoxButtons.YesNo);
-                batching = shouldWeContinue == DialogResult.Yes;
+                if (shouldWeContinue != DialogResult.Yes) source.Cancel();
             }
             else
             {
@@ -260,13 +249,17 @@ namespace Ellab_Resource_Translater
 
         private async void EMSuite_Initiation(object sender, EventArgs e)
         {
-            ableControls(false);
+            AbleControls(false);
 
             if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
             {
-                await Task.Run(() => EMSuite_Init(translationService));
+                cancelTSource = new CancellationTokenSource();
+
+                await Task.Run(() => EMSuite_Init(translationService, cancelTSource));
 
                 progressTitle.Invoke(() => progressTitle.Text = "Done");
+
+                cancelTSource.Dispose();
             }
             else
             {
@@ -275,14 +268,14 @@ namespace Ellab_Resource_Translater
     2) Disable AI Translation for all groups in Settings");
             }
 
-            ableControls(true);
+            AbleControls(true);
         }
 
         /// <summary>
         /// Disables the Buttons so that we don't Instantiate multiple tranlations at once
         /// </summary>
         /// <param name="enable">enabled or not - reversed for Cancel button.</param>
-        private void ableControls(bool enable)
+        private void AbleControls(bool enable)
         {
             ValSuiteButton.Enabled = enable;
             EMSuiteButton.Enabled = enable;
@@ -296,38 +289,46 @@ namespace Ellab_Resource_Translater
             CancellationButton.Enabled = !enable;
         }
 
-        private void EMSuite_Init(TranslationService? transServ)
+        private void EMSuite_Init(TranslationService? transServ, CancellationTokenSource source)
         {
             progressTitle.Invoke(() => progressTitle.Text = "EM Suite");
             var config = Config.Get();
             if (config.EMPath != "")
             {
-                Translators.EMSuite emsuite = new(transServ, dbConnection);
-                emsuite.Run(config.EMPath, progressListView, progressTracker);
-            }
-            else if (batching == true)
-            {
-                DialogResult shouldWeContinue = MessageBox.Show("Check EMSuite path in Settings.\nShould we continue with the rest?", "EM suite Path Missing!", MessageBoxButtons.YesNo);
-                batching = shouldWeContinue == DialogResult.Yes;
-            }
-            else
-            {
-                MessageBox.Show("Check EMSuite path in Settings", "EM suite path Missing", MessageBoxButtons.OK);
+                try
+                {
+                    EMSuite emsuite = new(transServ, connProv, source);
+                    emsuite.Run(config.EMPath, progressListView, progressTracker);
+                }
+                catch (OperationCanceledException)
+                {
+                    if (batching == true)
+                    {
+                        DialogResult shouldWeContinue = MessageBox.Show("Check EMSuite path in Settings.\nShould we continue with the rest?", "EM suite Path Missing!", MessageBoxButtons.YesNo);
+                        if (shouldWeContinue != DialogResult.Yes) source.Cancel();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Check EMSuite path in Settings", "EM suite path Missing", MessageBoxButtons.OK);
+                    }
+                }
             }
         }
 
         private async void EMandValButton_Click(object sender, EventArgs e)
         {
-            ableControls(false);
+            AbleControls(false);
 
             batching = true;
 
             if (Config.Get().languagesToAiTranslate.Count == 0 || translationService != null)
             {
-                if (batching)
-                    await Task.Run(() => EMSuite_Init(translationService));
-                if (batching) // in case we want to cancel after finding out EMsuite didn't have a value
-                    await Task.Run(() => ValSuite_Init(translationService));
+                cancelTSource = new CancellationTokenSource();
+                if (!cancelTSource.IsCancellationRequested)
+                    await Task.Run(() => EMSuite_Init(translationService, cancelTSource));
+                if (!cancelTSource.IsCancellationRequested) // in case we want to cancel after finding out EMsuite didn't have a value
+                    await Task.Run(() => ValSuite_Init(translationService, cancelTSource));
+                cancelTSource.Dispose();
             }
             else
             {
@@ -338,7 +339,7 @@ namespace Ellab_Resource_Translater
             progressTitle.Invoke(() => progressTitle.Text = "Done");
             batching = false;
 
-            ableControls(true);
+            AbleControls(true);
         }
 
         private void DBConnectionSetup_Click(object sender, EventArgs e)
@@ -370,7 +371,7 @@ namespace Ellab_Resource_Translater
 
         private void CancellationButton_Click(object sender, EventArgs e)
         {
-            DBProcessorBase.cancel = true;
+            cancelTSource?.Cancel();
         }
     }
 }

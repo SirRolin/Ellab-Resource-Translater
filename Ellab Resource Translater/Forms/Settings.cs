@@ -1,4 +1,4 @@
-﻿using Ellab_Resource_Translater.objects;
+﻿using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Util;
 using System;
 using System.Collections.Generic;
@@ -57,7 +57,7 @@ namespace Ellab_Resource_Translater
             var config = Config.Get();
             var languagePairs = Config.DefaultLanguages();
 
-            RolinsFormUtils.SaveCheckBoxListLocalised(
+            FormUtils.SaveCheckBoxListLocalised(
                 list: config.languagesToAiTranslate,
                 checkedListBox: translationCheckedListBox,
                 localiser: languagePairs);
@@ -69,7 +69,7 @@ namespace Ellab_Resource_Translater
             var languagePairs = Config.DefaultLanguages();
 
             setup++;
-            RolinsFormUtils.LoadCheckboxListLocalised(
+            FormUtils.LoadCheckboxListLocalised(
                 list: config.languagesToAiTranslate,
                 checkedListBox: translationCheckedListBox,
                 localiser: languagePairs

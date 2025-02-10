@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Translators
 {
-    internal class ValSuite(TranslationService? translationService, DbConnectionExtension? DBCon) : DBProcessorBase(translationService, DBCon, 0, Config.Get().threadsToUse)
+    internal class ValSuite(TranslationService? translationService, ConnectionProvider? DBCon, CancellationTokenSource source) : DBProcessorBase(translationService, DBCon, source, 0, Config.Get().threadsToUse)
     {
         internal void Run(string path, ListView view, Label progresText)
         {

@@ -4,16 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ellab_Resource_Translater.objects
+namespace Ellab_Resource_Translater.Objects
 {
-    internal class CheckResult
+    internal class CheckResult(bool check, string value)
     {
-        public bool check;
-        public string value;
-        public CheckResult(bool check, string value)
-        {
-            this.check = check;
-            this.value = value;
-        }
+        public bool check = check;
+        public string value = value;
     }
 }

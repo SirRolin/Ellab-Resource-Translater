@@ -24,12 +24,14 @@ namespace Ellab_Resource_Translater.Util
         /// <exception cref="InvalidOperationException"></exception>
         public static DbConnection CreateDbConnection(string connectionString)
         {
-            return DetectType(connectionString) switch {
+            DbConnection output =  DetectType(connectionString) switch {
                 ConnType.MySql or ConnType.MSSqlIS => new MySqlConnection(connectionString),
                 ConnType.MSSql => new SqlConnection(connectionString),
                 ConnType.PostgreSql => new NpgsqlConnection(connectionString),
                 _ => throw new InvalidOperationException("Unknown or unsupported database type in connection string.")
             };
+            output.ConnectionString = output.ConnectionString.Replace("MultipleActiveResultSets=False","MultipleActiveResultSets=True");
+            return output;
         }
 
         /// <summary>

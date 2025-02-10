@@ -1,5 +1,5 @@
 ﻿
---  See EMSuite entries
+-- See EMSuite entries
 -- select * from Translation where SystemEnum = 1;
 
 
@@ -22,4 +22,5 @@ WHERE row_number <> 1;
 -- Delete All 
 -- Delete from Translation;
 
-
+-- Test Fetch Command
+SELECT a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText FROM Translation a INNER JOIN ChangedTranslation b ON a.ID = b.TranslationID;

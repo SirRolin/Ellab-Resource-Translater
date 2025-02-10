@@ -1,7 +1,4 @@
-﻿using Azure;
-using Azure.AI.Translation.Text;
-using Ellab_Resource_Translater.objects;
-using Ellab_Resource_Translater.Objects;
+﻿using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Util;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -13,21 +10,236 @@ using System.Text.RegularExpressions;
 
 namespace Ellab_Resource_Translater.Translators
 {
-    internal class DBProcessorBase(TranslationService? translationService, DbConnectionExtension? DBCon, int systemEnum, int maxThreads = 32)
+    internal class DBProcessorBase(TranslationService? TranslationService, ConnectionProvider? connProv, CancellationTokenSource source, int systemEnum, int maxThreads = 32)
     {
-        private readonly int maxThreads = maxThreads;
-        private readonly int systemEnum = systemEnum; // For the Database
-        private readonly DbConnectionExtension? DBCon = DBCon;
-
-        private readonly TranslationService? TranslationService = translationService;
         private readonly Config config = Config.Get();
 
-        public static bool cancel = false;
+        private readonly CancellationToken token = source.Token;
+
+        public DatabaseTransactionHandler? dth;
 
         internal void Run(string path, ListView view, Label progresText, Regex regex)
         {
-            cancel = false;
+            // FetchData from Database that has entries in ChangedTranslations.
+            UpdateLocalFiles(path, view, progresText);
 
+            // setup a transaction handler so that we can abort
+            dth = new(
+                    source: source,
+                    // Delete All associated entities - In transaction, so if cancelled it'll not go through
+                    onTransactionStart: (dbc, trans) =>
+                    {
+                        progresText.Invoke(() => progresText.Text = "Clearing Database.");
+                        var c = dbc.CreateCommand();
+                        c.Transaction = trans;
+                        c.CommandType = CommandType.Text;
+                        c.CommandText = $@"DELETE a FROM Translation a where a.SystemEnum = { systemEnum } AND NOT a.ID in (Select ct.TranslationID from ChangedTranslation ct);";
+                        c.ExecuteNonQuery();
+                        c.Dispose();
+                    },
+                    // Key have to have quotes as "Key" is a keyword used in SQL
+                    commandText: @"
+                              INSERT INTO Translation 
+                                  (Comment, ""Key"", LanguageCode, ResourceName, Text, IsTranlatedInValSuite, SystemEnum) 
+                              VALUES 
+                                  (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum);",
+
+                    addData: (row, paramable) =>
+                    {
+                        AddParam(row, paramable, "Comment", DbType.String);
+                        AddParam(row, paramable, "Key", DbType.String);
+                        AddParam(row, paramable, "LanguageCode", DbType.String);
+                        AddParam(row, paramable, "ResourceName", DbType.String);
+                        AddParam(row, paramable, "Text", DbType.String);
+                        AddParam(row, paramable, "IsTranlatedInValSuite", DbType.Boolean);
+                        AddParam(row, paramable, "SystemEnum", DbType.Int32);
+                    },
+                    maxThreads: maxThreads);
+
+            // Read, Translate, Write & prepare dth.
+            SetupTasks(path, view, progresText, regex);
+
+            // Starts transfer to Database
+            if (connProv != null && !token.IsCancellationRequested)
+            {
+                dth.StartCommands(connProv, progresText, view, path.Length + 1, (dt) =>
+                {
+                    string output = "<Unknown>";
+                    // On Error DataTables are cleared, emptying them, but 
+                    if (dt != null && dt.Rows.Count > 0 && dt.Columns.Contains("ResourceName"))
+                        output = dt.Rows[0]["ResourceName"].ToString() ?? "<Unknown>";
+                    return output;
+                    });
+            }
+        }
+        /// <summary>
+        /// Fetches Data from the database and updates local resource files.
+        /// </summary>
+        /// <param name="path">root path</param>
+        /// <param name="view">the ViewList that shows which items are being processed atm.</param>
+        /// <param name="progresText">The Label that is updated with the progres</param>
+        /// <exception cref="NotImplementedException"></exception>
+        private void UpdateLocalFiles(string path, ListView view, Label progresText)
+        {
+            // Update UI
+            FormUtils.LabelTextUpdater(progresText, "Fetching changed translations from DB.");
+
+            if (connProv != null && !token.IsCancellationRequested)
+            {
+                using DbConnectionExtension dce = connProv.Get();
+
+                // Read from the DB
+                DbCommand command = dce.conn.CreateCommand();
+                command.CommandText = $@"SELECT a.""Key"", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as ""ChangedID"" FROM Translation a JOIN ChangedTranslation b ON a.ID = b.TranslationID WHERE a.SystemEnum = {systemEnum};";
+                dce.WaitForOpen(() =>
+                {
+                    source.Cancel();
+                    source.Token.ThrowIfCancellationRequested();
+                });
+                
+                DbDataReader changedTexts = command.ExecuteReader();
+
+                // Load changes
+                if (changedTexts.HasRows)
+                {
+                    // Quickly Extract Data to DataTables, so we can quantify the tables and close the connection.
+                    ConcurrentQueue<DataTable> dataTables = [];
+                    while (!changedTexts.IsClosed)
+                    {
+                        DataTable table = new();
+                        table.Load(changedTexts);
+                        dataTables.Enqueue(table);
+                    }
+                    changedTexts.DisposeAsync();
+                    command.DisposeAsync();
+                    dce.TryClose();
+
+
+                    // Merging the Tables with column data so we can fetch it later.
+                    // Reasoning for this is so we can multithread
+                    int currentProgress = 0;
+                    int maxProgresses = dataTables.Count;
+
+                    void myUpdate(string pretext)
+                    {
+                        Interlocked.Increment(ref currentProgress);
+                        FormUtils.LabelTextUpdater(progresText, pretext, currentProgress, " out of ", maxProgresses);
+                    }
+
+                    ConcurrentQueue<(int dataTNum, DataRow row)> dataRows = [];
+                    ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment)> dataColumns = [];
+                    void processTable(DataTable dt)
+                    {
+                        if (dt.Columns["ResourceName"] is DataColumn resourceColumn
+                            && dt.Columns["Key"] is DataColumn keyColumn
+                            && dt.Columns["ChangedText"] is DataColumn textColumn
+                            && dt.Columns["Comment"] is DataColumn commentValue) {
+                            dataColumns.TryAdd(currentProgress, (resourceColumn, keyColumn, textColumn, commentValue));
+                            foreach (DataRow row in dt.Rows)
+                            {
+                                dataRows.Enqueue((currentProgress, row));
+                            }
+                        }
+                    }
+                    ExecutionHandler.Execute(maxProgresses, maxThreads, (i) =>
+                    {
+                        while (dataTables.TryDequeue(out DataTable? table))
+                        {
+                            FormUtils.HandleProcess(
+                                update: () => myUpdate("Merging tables: "),
+                                listView: view,
+                                resourceName: i + ") Fetching Data...",
+                                process: () => processTable(table));
+                        }
+                    });
+
+                    // Splits it into a Dictionary so that we can open update local files in groups instead of one change at a time.
+                    currentProgress = 0;
+                    maxProgresses = dataRows.Count;
+                    ConcurrentDictionary<string, List<Translation>> changesToRegister = [];
+                    void processRow(DataRow row, int dataTNumber)
+                    {
+                        if (row[dataColumns[dataTNumber].resource]   is string resourceValue
+                            && row[dataColumns[dataTNumber].key]     is string keyValue
+                            && row[dataColumns[dataTNumber].value]   is string valueValue
+                            && row[dataColumns[dataTNumber].comment] is string commentValue)
+                        {
+                            changesToRegister.AddOrUpdate(resourceValue, [new Translation(keyValue, valueValue, commentValue)], 
+                                (key, orgList) => {
+                                    orgList.Add(new Translation(keyValue, valueValue, commentValue));
+                                    return orgList;
+                                });
+                        }
+                    }
+                    ExecutionHandler.Execute(maxThreads, maxProgresses, (i) =>
+                    {
+                        while (dataRows.TryDequeue(out var rowData))
+                        {
+                            FormUtils.HandleProcess(
+                                update: () => myUpdate("Grouping Data on same Resource Files: "),
+                                listView: view,
+                                resourceName: i + ") Fetching Data...",
+                                process: () => processRow(rowData.row, rowData.dataTNum));
+                            Interlocked.Increment(ref currentProgress);
+                        }
+                    });
+
+                    // ConcurrentDictionary can't be popped, so we have to have a queue of it's keys
+                    ConcurrentQueue<string> files = new(changesToRegister.Keys);
+
+                    // Process Changes by the ResourceFile
+                    currentProgress = 0;
+                    maxProgresses = files.Count;
+                    void processChanges(string rootPath, string transDictKey)
+                    {
+                        // Load Local data so we don't lose data that wasn't overriden
+                        var translations = ReadResource(string.Concat(rootPath, rootPath.EndsWith("/") ? "": "/", transDictKey));
+
+                        // Override in Memory
+                        var changes = changesToRegister[transDictKey];
+                        changes.ForEach(trans => {
+                            if(translations.TryGetValue(trans.key, out Translation? oldtrans))
+                            {
+                                oldtrans.value = trans.value;
+                            } else
+                            {
+                                translations.Add(trans.key, trans);
+                            }
+                        });
+
+                        // Save to Local Data
+                        WriteResource(rootPath, translations);
+                    }
+
+                    ExecutionHandler.Execute(maxThreads, maxProgresses, (i) =>
+                    {
+                        while (files.TryDequeue(out var resourceName))
+                        {
+                            FormUtils.HandleProcess(
+                                pathLength: -1, // -1 to disable 
+                                update: () => FormUtils.LabelTextUpdater(progresText, "Saving Changes: ", currentProgress, " out of ", maxProgresses),
+                                listView: view,
+                                resourceName: i + ") Fetching Data...",
+                                process: () => processChanges(path, resourceName));
+                            Interlocked.Increment(ref currentProgress);
+                        }
+                    });
+                    command = dce.conn.CreateCommand();
+                    command.CommandText = $@"DELETE FROM ChangedTranslation WHERE ChangedTranslation.TranslationID in (SELECT ID FROM Translation where SystemEnum = {systemEnum});";
+                    dce.WaitForOpen(() =>
+                    {
+                        source.Cancel();
+                        source.Token.ThrowIfCancellationRequested();
+                    });
+                    command.ExecuteNonQuery();
+                    command.Dispose();
+                    dce.conn.CloseAsync();
+                }
+            }
+        }
+
+        private void SetupTasks(string path, ListView view, Label progresText, Regex regex)
+        {
             // Tracks resources done - Starts at -1 so that we can call it to get the right format to start with.
             int currentProcessed = -1;
             var allResources = Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories).ToHashSet();
@@ -39,79 +251,58 @@ namespace Ellab_Resource_Translater.Translators
             void updateProgresText()
             {
                 Interlocked.Increment(ref currentProcessed);
-                progresText.Invoke(() => progresText.Text = currentProcessed + " out of " + maxProcesses);
+                FormUtils.LabelTextUpdater(progresText, "Preparing ", currentProcessed, " out of ", maxProcesses);
             }
             updateProgresText();
 
-            // If we want to run it syncronous, we can set maxThreads to 0 or less. Otherwise it's asyncronous.
-            if (maxThreads > 0)
+            // Execution Time
+            void onFailing(AggregateException ae)
             {
-                Task[] tasks = new Task[maxThreads];
-                for (int i = 0; i < maxThreads; i++)
+                foreach (Exception e in ae.InnerExceptions)
                 {
-                    tasks[i] = Task.Run(() => ProcessQueue(pathLength: path.Length,
-                                                           queue: englishQueuedFiles,
-                                                           existingResources: allResources,
-                                                           update: updateProgresText,
-                                                           listView: view));
+                    if (e is TaskCanceledException)
+                        englishQueuedFiles.Clear();
+                    else
+                        Console.WriteLine("Exception: " + e.GetType().Name);
                 }
-                Task.WhenAll(tasks).Wait();
-            } 
-            else
-            {
-                ProcessQueue(pathLength: path.Length,
-                                                           queue: englishQueuedFiles,
-                                                           existingResources: allResources,
-                                                           update: updateProgresText,
-                                                           listView: view);
             }
+            ExecutionHandler.TryExecute(maxThreads, allResources.Count,
+                    action: (i) => ProcessQueue(rootPathLength: path.Length,
+                                                               queue: englishQueuedFiles,
+                                                               existingResources: allResources,
+                                                               update: updateProgresText,
+                                                               listView: view),
+                    onFailing: (Action<AggregateException>)onFailing
+                );
         }
 
-        private void ProcessQueue(int pathLength, ConcurrentQueue<string> queue, HashSet<string> existingResources, Action update, ListView listView)
+        private void ProcessQueue(int rootPathLength, ConcurrentQueue<string> queue, HashSet<string> existingResources, Action update, ListView listView)
         {
-            ListViewItem listViewItem;
-            while (!cancel)
+            while (!source.IsCancellationRequested)
             {
                 if (queue.TryDequeue(out var resource))
                 {
-                    string shortenedPath = resource[(pathLength + 1)..]; // Remove the root path
-                    listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
-                    try
+                    void process()
                     {
-                        TranslateResource(existingResources, resource, pathLength).Wait();
-                    } catch (AggregateException ae)
-                    {
-                        if (!cancel)
+                        try
                         {
-                            cancel = true;
-                            Debug.WriteLine(ae.Message);
-                            MessageBox.Show("Translations used up for now. Try again later."); 
+                            TranslateResource(existingResources, resource, rootPathLength);
+                        }
+                        catch (AggregateException ae)
+                        {
+                            if (!source.IsCancellationRequested)
+                            {
+                                source.Cancel();
+                                Debug.WriteLine(ae.Message);
+                                MessageBox.Show("Translations used up for now. Try again later.");
+                            }
                         }
                     }
-                    listView.Invoke(() => listView.Items.Remove(listViewItem));
-                    update.Invoke();
+                    FormUtils.HandleProcess(rootPathLength, update, listView, resource, process);
                 }
                 else
                     break;
             }
-        }
-
-        private static void AddParam(DataRow row, DbBatchCommand c, string name, DbType dbType)
-        {
-            var paramComment = c.CreateParameter();
-            paramComment.ParameterName = "@" + name;
-            paramComment.Value = row[name];
-            paramComment.DbType = dbType;
-            c.Parameters.Add(paramComment);
-        }
-
-        private static void AddParam(DataRow row, DbCommand c, string name, DbType dbType)
-        {
-            var paramComment = c.CreateParameter();
-            paramComment.ParameterName = "@" + name;
-            paramComment.Value = row[name];
-            paramComment.DbType = dbType;
-            c.Parameters.Add(paramComment);
         }
 
         private static DataTable CreateDataTable(int pathLength, string resource, Dictionary<string, Dictionary<string, Translation>> translations, int systemEnum)
@@ -128,7 +319,9 @@ namespace Ellab_Resource_Translater.Translators
             foreach (var item in translations)
             {
                 string language = item.Key;
-                string resourceName = Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx")[(pathLength + 1)..];
+                string resourceName = resource[(pathLength + 1)..];
+                if(!item.Key.Equals("en",StringComparison.OrdinalIgnoreCase))
+                    resourceName = Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx");
                 foreach (var value in item.Value)
                 {
                     string comment = value.Value.comment;
@@ -246,7 +439,7 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private async Task TranslateResource(HashSet<string> existing, string resource, int pathLength)
+        private void TranslateResource(HashSet<string> existing, string resource, int pathLength)
         {
             // To store the Data in each language.
             Dictionary<string, Dictionary<string, Translation>> translations = [];
@@ -296,113 +489,25 @@ namespace Ellab_Resource_Translater.Translators
             }
 
             // Try to write to the Database
-            await WriteToDatabase(pathLength, resource, translations);
+            WriteToDatabase(pathLength, resource, translations);
         }
 
-        private async Task WriteToDatabase(int pathLength, string resource, Dictionary<string, Dictionary<string, Translation>> translations)
+        private void WriteToDatabase(int pathLength, string resource, Dictionary<string, Dictionary<string, Translation>> translations)
         {
-            if (DBCon != null)
+            if (dth != null)
             {
                 DataTable dataTable = CreateDataTable(pathLength, resource, translations, systemEnum);
-
-                bool batchFailed = false;
-                // Upload to the Database
-                if (DBCon.connection.CanCreateBatch)
-                {
-                    var s = DBCon.connection.CreateBatch();
-
-                    foreach (DataRow row in dataTable.Rows)
-                    {
-                        var c = s.CreateBatchCommand();
-                        // Key have to have quotes as "Key" is a keyword used in SQL
-                        c.CommandText = @"
-                            INSERT INTO Translation 
-                                (Comment, ""Key"", LanguageCode, ResourceName, Text, IsTranlatedInValSuite, SystemEnum) 
-                            VALUES 
-                                (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum)";
-
-                        AddParam(row, c, "Comment", DbType.String);
-                        AddParam(row, c, "Key", DbType.String);
-                        AddParam(row, c, "LanguageCode", DbType.String);
-                        AddParam(row, c, "ResourceName", DbType.String);
-                        AddParam(row, c, "Text", DbType.String);
-                        AddParam(row, c, "IsTranlatedInValSuite", DbType.Boolean);
-                        AddParam(row, c, "SystemEnum", DbType.Int32);
-                        s.BatchCommands.Add(c);
-                    }
-                    // Sometimes there's nothing to upload
-                    if(s.BatchCommands.Count > 0)
-                    {
-                        try 
-                        {
-                            await DBCon.ThreadSafeAsyncFunction((_) =>
-                            {
-                                s.ExecuteNonQuery();
-                            });
-                        }
-                        catch (Exception)
-                        {
-                            batchFailed = true;
-                        }
-                    } else
-                    {
-                        s.Cancel();
-                    }
-                }
-                else
-                {
-                    batchFailed = true;
-                }
-                if (batchFailed)
-                {
-                    using DbCommand command = DBCon.connection.CreateCommand();
-                    // Key have to have quotes as "Key" is a keyword used in SQL
-                    command.CommandText = @"
-                            INSERT INTO Translation 
-                                (Comment, ""Key"", LanguageCode, ResourceName, Text, IsTranlatedInValSuite, SystemEnum) 
-                            VALUES 
-                                (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum)";
-
-                    foreach (DataRow row in dataTable.Rows)
-                    {
-                        // Preparing the Values
-                        AddParam(row, command, "Comment", DbType.String);
-                        AddParam(row, command, "Key", DbType.String);
-                        AddParam(row, command, "LanguageCode", DbType.String);
-                        AddParam(row, command, "ResourceName", DbType.String);
-                        AddParam(row, command, "Text", DbType.String);
-                        AddParam(row, command, "IsTranlatedInValSuite", DbType.Boolean);
-                        AddParam(row, command, "SystemEnum", DbType.Int32);
-
-                        // Executing Time
-                        int tries = 0;
-                        while (tries < 2)
-                        {
-                            try
-                            {
-                                await DBCon.ThreadSafeAsyncFunction((s) =>
-                                {
-                                    // Sometimes the connection closes
-                                    if (DBCon.connection.State != ConnectionState.Open)
-                                        DBCon.connection.Open();
-
-                                    command.ExecuteNonQuery();
-                                });
-                                break;
-                            }
-                            catch
-                            {
-                                tries++;
-                                Task.Delay(500).Wait(); // Wait half a second.
-                            }
-                            if (tries == 2)
-                            {
-                                MessageBox.Show("failed to upload to the database:" + resource);
-                            }
-                        }
-                    }
-                }
+                dth.AddInsert(dataTable);
             }
+        }
+
+        private static void AddParam(DataRow row, IDBparameterable c, string name, DbType dbType)
+        {
+            var paramComment = c.CreateParameter();
+            paramComment.ParameterName = "@" + name;
+            paramComment.Value = row[name];
+            paramComment.DbType = dbType;
+            c.Parameters.Add(paramComment);
         }
     }
 }
