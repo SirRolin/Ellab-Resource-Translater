@@ -75,6 +75,15 @@ namespace Ellab_Resource_Translater.Util
             updateProgresText();
             using var dce = connProv.Get();
 
+            bool process(DbConnection dce, DbTransaction? transAct, DataTable item)
+            {
+                if (token.IsCancellationRequested)
+                    return false;
+                else
+                    BuildAndExecute(dce, item, transAct);
+                return true;
+            }
+
             void execution(DbTransaction? transAct)
             {
                 onTransactionStart.Invoke(dce, transAct);
@@ -95,15 +104,6 @@ namespace Ellab_Resource_Translater.Util
                         }
                     }
                 });
-            }
-
-            bool process(DbConnection dce, DbTransaction? transAct, DataTable item)
-            {
-                if (token.IsCancellationRequested)
-                    return false;
-                else
-                    BuildAndExecute(dce, item, transAct);
-                return true;
             }
 
             dce.WaitForOpen(source.Cancel);
