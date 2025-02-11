@@ -37,8 +37,10 @@ namespace Ellab_Resource_Translater.Util
         public List<string> languagesToTranslate = [];
         public List<string> languagesToAiTranslate = [];
         public int threadsToUse = 32;
+        public int insertersToUse = 8;
         public Size MainWindowSize = new(900, 650);
         public Size SettingWindowSize = new(600, 400);
+        public bool closeOnceDone = false;
 
         // Singleton instanciation accessed with Get()
         private static Config? instance;
@@ -53,21 +55,23 @@ namespace Ellab_Resource_Translater.Util
             return this;
         }
         [JsonConstructor]
-        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse, Size? MainWindowSize, Size? SettingWindowSize)
+        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse, int connectionsToUse, Size? MainWindowSize, Size? SettingWindowSize, bool closeOnceDone)
         {
             this.EMPath = eMPath;
             this.ValPath = ValPath;
             this.languagesToTranslate = languagesToTranslate;
             this.languagesToAiTranslate = languagesToAiTranslate;
             this.threadsToUse = threadsToUse;
+            this.insertersToUse = connectionsToUse;
             this.MainWindowSize = MainWindowSize ?? new(900, 650); ;
             this.SettingWindowSize = SettingWindowSize ?? new(600, 400);
+            this.closeOnceDone = closeOnceDone;
         }
 
 
         public static Config Get()
         {
-            // loading from disc
+            // try loading from disc
             if (instance == null & File.Exists(path))
             {
                 try
@@ -80,10 +84,7 @@ namespace Ellab_Resource_Translater.Util
             }
             
             // new setup
-            if (instance == null)
-            {
-                instance = new Config().Setup();
-            }
+            instance ??= new Config().Setup();
 
             return instance;
         }

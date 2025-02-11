@@ -8,24 +8,51 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Util
 {
+    /// <summary>
+    /// Provides connections with the <paramref name="connectionString"/> provided and keeps reference to them until they are closed.<br/>
+    /// You can call Dispose on this to Dispose of all connections provided.
+    /// </summary>
+    /// <remarks>
+    /// This is Thread-safe.
+    /// </remarks>
+    /// <param name="connectionString">a string supported by <see cref="DBStringHandler.CreateDbConnection(string)"/>, Types can be seen in <see cref="Enums.ConnType"/></param>
     internal class ConnectionProvider(string connectionString) : IDisposable
     {
-        private List<DbConnectionExtension> dces = [];
+        private readonly List<DbConnection> dces = [];
+        private readonly object lockObject = new();
 
+        /// <summary>
+        /// Disposes of all connections this has provided.
+        /// </summary>
+        /// <remarks>
+        /// Can still provide more <see cref="DbConnection"/>s.
+        /// </remarks>
         public void Dispose()
         {
-            // Get rid of all active connections
-            while (dces.Count > 0)
+            lock (this.lockObject)
             {
-                dces[0].Dispose();
+                // Get rid of all active connections
+                while (dces.Count > 0)
+                {
+                    dces[0].Dispose();
+                }
             }
         }
 
-        public DbConnectionExtension Get()
+        public DbConnection Get()
         {
-            DbConnectionExtension dce = new(DBStringHandler.CreateDbConnection(connectionString));
-            dces.Add(dce);
-            dce.conn.Disposed += (s,e) => dces.Remove(dce);
+            DbConnection dce = DBStringHandler.CreateDbConnection(connectionString);
+            lock (this.lockObject)
+            {
+                dces.Add(dce);
+            }
+            dce.Disposed += (s, e) =>
+            {
+                lock (this.lockObject)
+                {
+                    dces.Remove(dce);
+                }
+            };
             return dce;
         }
     }

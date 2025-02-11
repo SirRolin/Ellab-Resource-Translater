@@ -78,6 +78,8 @@ namespace Ellab_Resource_Translater
             EMsuitePath.Text = config.EMPath;
             ValPath.Text = config.ValPath;
             coresNumeric.Value = config.threadsToUse;
+            inserterNumeric.Value = config.insertersToUse;
+            CloseOnSuccess.Checked = config.closeOnceDone;
             Config.AssignSizeSetting(this, (s) => config.SettingWindowSize = s, this.Size);
             setup--;
         }
@@ -105,13 +107,22 @@ namespace Ellab_Resource_Translater
             Config.Get().ValPath = ValPath.Text;
         }
 
-        private void numericUpDown1_ValueChanged(object sender, EventArgs e)
+        private void NumericUpDown1_ValueChanged(object sender, EventArgs e)
         {
             // While Loading I don't want this to run
             if (setup > 0)
                 return;
 
-            Config.Get().threadsToUse = (int) coresNumeric.Value;
+            Config.Get().threadsToUse = (int)coresNumeric.Value;
+        }
+
+        private void CloseOnSuccess_CheckedChanged(object sender, EventArgs e)
+        {
+            // While Loading I don't want this to run
+            if (setup > 0)
+                return;
+
+            Config.Get().closeOnceDone = CloseOnSuccess.Checked;
         }
     }
 }

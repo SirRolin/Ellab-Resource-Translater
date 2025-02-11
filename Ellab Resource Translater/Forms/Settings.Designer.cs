@@ -48,11 +48,17 @@ namespace Ellab_Resource_Translater
             panel1 = new Panel();
             coresNumeric = new NumericUpDown();
             label1 = new Label();
+            panel2 = new Panel();
+            inserterNumeric = new NumericUpDown();
+            label2 = new Label();
+            CloseOnSuccess = new CheckBox();
             LocationTablePanel.SuspendLayout();
             translationPanel.SuspendLayout();
             flowLayoutPanel1.SuspendLayout();
             panel1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)coresNumeric).BeginInit();
+            panel2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)inserterNumeric).BeginInit();
             SuspendLayout();
             // 
             // ValFBDialog
@@ -153,7 +159,7 @@ namespace Ellab_Resource_Translater
             translationPanel.Controls.Add(translationLabel);
             translationPanel.Controls.Add(translationCheckedListBox);
             translationPanel.Location = new Point(15, 15);
-            translationPanel.Margin = new Padding(15);
+            translationPanel.Margin = new Padding(15, 0, 15, 0);
             translationPanel.MinimumSize = new Size(100, 0);
             translationPanel.Name = "translationPanel";
             translationPanel.Size = new Size(103, 223);
@@ -189,10 +195,14 @@ namespace Ellab_Resource_Translater
             // 
             flowLayoutPanel1.Controls.Add(translationPanel);
             flowLayoutPanel1.Controls.Add(panel1);
+            flowLayoutPanel1.Controls.Add(panel2);
+            flowLayoutPanel1.Controls.Add(CloseOnSuccess);
             flowLayoutPanel1.Dock = DockStyle.Fill;
             flowLayoutPanel1.FlowDirection = FlowDirection.TopDown;
             flowLayoutPanel1.Location = new Point(0, 88);
+            flowLayoutPanel1.Margin = new Padding(0);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
+            flowLayoutPanel1.Padding = new Padding(0, 15, 0, 15);
             flowLayoutPanel1.Size = new Size(584, 273);
             flowLayoutPanel1.TabIndex = 5;
             // 
@@ -202,7 +212,7 @@ namespace Ellab_Resource_Translater
             panel1.Controls.Add(coresNumeric);
             panel1.Controls.Add(label1);
             panel1.Location = new Point(148, 15);
-            panel1.Margin = new Padding(15);
+            panel1.Margin = new Padding(15, 0, 15, 0);
             panel1.Name = "panel1";
             panel1.Size = new Size(178, 52);
             panel1.TabIndex = 1;
@@ -216,7 +226,7 @@ namespace Ellab_Resource_Translater
             coresNumeric.Size = new Size(172, 23);
             coresNumeric.TabIndex = 1;
             coresNumeric.Value = new decimal(new int[] { 32, 0, 0, 0 });
-            coresNumeric.ValueChanged += numericUpDown1_ValueChanged;
+            coresNumeric.ValueChanged += NumericUpDown1_ValueChanged;
             // 
             // label1
             // 
@@ -226,9 +236,54 @@ namespace Ellab_Resource_Translater
             label1.Margin = new Padding(3);
             label1.Name = "label1";
             label1.Padding = new Padding(3);
-            label1.Size = new Size(172, 21);
+            label1.Size = new Size(170, 21);
             label1.TabIndex = 0;
-            label1.Text = "Workers (0 = sync, norm 8-32)";
+            label1.Text = "Readers (0 = sync, norm 8-32)";
+            // 
+            // panel2
+            // 
+            panel2.AutoSize = true;
+            panel2.Controls.Add(inserterNumeric);
+            panel2.Controls.Add(label2);
+            panel2.Location = new Point(148, 67);
+            panel2.Margin = new Padding(15, 0, 15, 0);
+            panel2.Name = "panel2";
+            panel2.Size = new Size(178, 52);
+            panel2.TabIndex = 3;
+            // 
+            // inserterNumeric
+            // 
+            inserterNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            inserterNumeric.Location = new Point(3, 26);
+            inserterNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
+            inserterNumeric.Name = "inserterNumeric";
+            inserterNumeric.Size = new Size(150, 23);
+            inserterNumeric.TabIndex = 1;
+            inserterNumeric.Value = new decimal(new int[] { 4, 0, 0, 0 });
+            // 
+            // label2
+            // 
+            label2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            label2.AutoSize = true;
+            label2.Location = new Point(3, 3);
+            label2.Margin = new Padding(3);
+            label2.Name = "label2";
+            label2.Padding = new Padding(3);
+            label2.Size = new Size(135, 21);
+            label2.TabIndex = 0;
+            label2.Text = "Inserters (0 = sync, 1-8)";
+            // 
+            // CloseOnSuccess
+            // 
+            CloseOnSuccess.AutoSize = true;
+            CloseOnSuccess.Location = new Point(151, 119);
+            CloseOnSuccess.Margin = new Padding(18, 0, 15, 0);
+            CloseOnSuccess.Name = "CloseOnSuccess";
+            CloseOnSuccess.Size = new Size(172, 19);
+            CloseOnSuccess.TabIndex = 2;
+            CloseOnSuccess.Text = "Close Program if Successful";
+            CloseOnSuccess.UseVisualStyleBackColor = true;
+            CloseOnSuccess.CheckedChanged += CloseOnSuccess_CheckedChanged;
             // 
             // Settings
             // 
@@ -248,6 +303,9 @@ namespace Ellab_Resource_Translater
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)coresNumeric).EndInit();
+            panel2.ResumeLayout(false);
+            panel2.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)inserterNumeric).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -269,5 +327,9 @@ namespace Ellab_Resource_Translater
         private Panel panel1;
         private NumericUpDown coresNumeric;
         private Label label1;
+        private CheckBox CloseOnSuccess;
+        private Panel panel2;
+        private NumericUpDown inserterNumeric;
+        private Label label2;
     }
 }

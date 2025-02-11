@@ -1,65 +1,59 @@
-﻿using Ellab_Resource_Translater.Util;
-using Microsoft.Data.SqlClient;
-using MySql.Data.MySqlClient;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
+using System.Data;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Concurrent;
 
 namespace Ellab_Resource_Translater.Objects
 {
-    /// <summary>
-    /// a wrapping class to hold a ADO.net connection.
-    /// </summary>
-    /// <remarks>
-    /// Obsolete due to <see cref="DbConnectionExtender"/>
-    /// </remarks>
-    [Obsolete]
-    internal class DbConnectionExtension : IDisposable
+    internal static class DbConnectionExtender
     {
-        public DbConnectionExtension(DbConnection connection)
+        public static bool CanMultiResult(this DbConnection conn)
         {
-            conn = connection;
-            canMultiResult = !conn.ConnectionString.Contains("MultipleActiveResultSets=False");
+            return !conn.ConnectionString.Contains("MultipleActiveResultSets=False");
         }
-        public DbConnection conn;
-        private bool isDisposed = false;
-        public bool canMultiResult;
 
-        private readonly SemaphoreSlim _semaphore = new(1, 1);
+        private static readonly ConcurrentDictionary<DbConnection, WeakReference<SemaphoreSlim>> _semaphores = [];
 
-        public async Task ThreadSafeAsyncFunction(Action<DbConnection> query)
+        private static SemaphoreSlim GetInstanceSemaphore(DbConnection db)
+        {
+            return _semaphores.GetOrAdd(db, _ => new WeakReference<SemaphoreSlim>(new SemaphoreSlim(1, 1)))
+                              .TryGetTarget(out var sem) ? sem : new SemaphoreSlim(1, 1);
+        }
+
+        public static async Task ThreadSafeAsyncFunction(this DbConnection conn, Action<DbConnection> query)
         {
             if (conn == null)
                 return;
 
             // In case we can have multiple Result Sets
-            if (canMultiResult)
+            if (CanMultiResult(conn))
             {
                 query.Invoke(conn);
                 return;
             }
 
             // Threadsafe in case we can't
-            await _semaphore.WaitAsync();
+            SemaphoreSlim semaphore = GetInstanceSemaphore(conn);
+            await semaphore.WaitAsync();
             try
             {
                 query.Invoke(conn);
             }
             finally
             {
-                _semaphore.Release();
+                semaphore.Release();
             }
         }
 
-        public void WaitForOpen()
+        public static void WaitForOpen(this DbConnection conn)
         {
-            WaitForOpen(() => { });
+            WaitForOpen(conn, () => { });
         }
-        public void WaitForOpen(Action ConnectionBroke)
+        public static void WaitForOpen(this DbConnection conn, Action ConnectionBroke)
         {
             // Make sure the connection is open before we proceed
             while (!conn.State.HasFlag(ConnectionState.Open))
@@ -72,15 +66,15 @@ namespace Ellab_Resource_Translater.Objects
                     break;
                 }
 
-                if(!conn.State.HasFlag(ConnectionState.Open))
+                if (!conn.State.HasFlag(ConnectionState.Open))
                     Task.Delay(100).Wait();
             }
         }
 
-        public void WaitForFinish()
+        public static void WaitForFinish(this DbConnection conn)
         {
             if (conn.State == ConnectionState.Closed)
-                WaitForOpen();
+                conn.WaitForOpen();
 
             while (conn.State.HasFlag(ConnectionState.Executing) || conn.State.HasFlag(ConnectionState.Fetching))
             {
@@ -88,18 +82,10 @@ namespace Ellab_Resource_Translater.Objects
             }
         }
 
-        public void TryClose()
+        public static void TryClose(this DbConnection conn)
         {
             if (conn != null && conn.State != ConnectionState.Closed)
                 conn.CloseAsync();
-        }
-
-        public void Dispose()
-        {
-            if(isDisposed) return;
-            isDisposed = true;
-            conn?.Dispose();
-            _semaphore.Dispose();
         }
     }
 }

@@ -4,8 +4,7 @@ using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Translators;
 using Ellab_Resource_Translater.Util;
 using Newtonsoft.Json;
-using System.Data;
-using System.Threading;
+using System.Data.Common;
 
 namespace Ellab_Resource_Translater
 {
@@ -21,7 +20,7 @@ namespace Ellab_Resource_Translater
         private CancellationTokenSource? cancelTSource;
 
         private string connectionStringState = "";
-        private Task connectionStringUpdater;
+        private readonly Task connectionStringUpdater;
 
         public MainForm()
         {
@@ -78,7 +77,7 @@ namespace Ellab_Resource_Translater
                     connectionStringState = "Test...";
                     try
                     {
-                        using System.Data.Common.DbConnection conn = connProv.Get().conn;
+                        using DbConnection conn = connProv.Get();
                         await conn.OpenAsync();
                         if (conn.State == System.Data.ConnectionState.Open)
                         {
@@ -216,6 +215,9 @@ namespace Ellab_Resource_Translater
 
                 progressTitle.Invoke(() => progressTitle.Text = cancelTSource.IsCancellationRequested ? "Request Cancelled" : "Request Done");
 
+                if (!cancelTSource.IsCancellationRequested && Config.Get().closeOnceDone)
+                    Close();
+
                 cancelTSource.Dispose();
             }
             else
@@ -258,6 +260,9 @@ namespace Ellab_Resource_Translater
                 await Task.Run(() => EMSuite_Init(translationService, cancelTSource));
 
                 progressTitle.Invoke(() => progressTitle.Text = "Done");
+
+                if (!cancelTSource.IsCancellationRequested && Config.Get().closeOnceDone)
+                    Close();
 
                 cancelTSource.Dispose();
             }
@@ -328,6 +333,10 @@ namespace Ellab_Resource_Translater
                     await Task.Run(() => EMSuite_Init(translationService, cancelTSource));
                 if (!cancelTSource.IsCancellationRequested) // in case we want to cancel after finding out EMsuite didn't have a value
                     await Task.Run(() => ValSuite_Init(translationService, cancelTSource));
+
+                if (!cancelTSource.IsCancellationRequested && Config.Get().closeOnceDone)
+                    Close();
+
                 cancelTSource.Dispose();
             }
             else

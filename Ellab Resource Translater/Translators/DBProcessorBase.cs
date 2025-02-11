@@ -1,4 +1,6 @@
-﻿using Ellab_Resource_Translater.Objects;
+﻿using Ellab_Resource_Translater.Interfaces;
+using Ellab_Resource_Translater.Objects;
+using Ellab_Resource_Translater.Objects.Extensions;
 using Ellab_Resource_Translater.Util;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -44,17 +46,17 @@ namespace Ellab_Resource_Translater.Translators
                               VALUES 
                                   (@Comment, @Key, @LanguageCode, @ResourceName, @Text, @IsTranlatedInValSuite, @SystemEnum);",
 
-                    addData: (row, paramable) =>
+                    addParameters: (row, paramable) =>
                     {
-                        AddParam(row, paramable, "Comment", DbType.String);
-                        AddParam(row, paramable, "Key", DbType.String);
-                        AddParam(row, paramable, "LanguageCode", DbType.String);
-                        AddParam(row, paramable, "ResourceName", DbType.String);
-                        AddParam(row, paramable, "Text", DbType.String);
-                        AddParam(row, paramable, "IsTranlatedInValSuite", DbType.Boolean);
-                        AddParam(row, paramable, "SystemEnum", DbType.Int32);
+                        paramable.AddParam(row, "Comment", DbType.String);
+                        paramable.AddParam(row, "Key", DbType.String);
+                        paramable.AddParam(row, "LanguageCode", DbType.String);
+                        paramable.AddParam(row, "ResourceName", DbType.String);
+                        paramable.AddParam(row, "Text", DbType.String);
+                        paramable.AddParam(row, "IsTranlatedInValSuite", DbType.Boolean);
+                        paramable.AddParam(row, "SystemEnum", DbType.Int32);
                     },
-                    maxThreads: maxThreads);
+                    inserters: Config.Get().insertersToUse);
 
             // Read, Translate, Write & prepare dth.
             SetupTasks(path, view, progresText, regex);
@@ -62,16 +64,17 @@ namespace Ellab_Resource_Translater.Translators
             // Starts transfer to Database
             if (connProv != null && !token.IsCancellationRequested)
             {
-                dth.StartCommands(connProv, progresText, view, path.Length + 1, (dt) =>
+                dth.StartCommands(connProv, progresText, view, (dt) =>
                 {
                     string output = "<Unknown>";
                     // On Error DataTables are cleared, emptying them, but 
                     if (dt != null && dt.Rows.Count > 0 && dt.Columns.Contains("ResourceName"))
                         output = dt.Rows[0]["ResourceName"].ToString() ?? "<Unknown>";
                     return output;
-                    });
+                });
             }
         }
+
         /// <summary>
         /// Fetches Data from the database and updates local resource files.
         /// </summary>
@@ -86,10 +89,10 @@ namespace Ellab_Resource_Translater.Translators
 
             if (connProv != null && !token.IsCancellationRequested)
             {
-                using DbConnectionExtension dce = connProv.Get();
+                using DbConnection dce = connProv.Get();
 
                 // Read from the DB
-                DbCommand command = dce.conn.CreateCommand();
+                using DbCommand command = dce.CreateCommand();
                 command.CommandText = $@"SELECT a.""Key"", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as ""ChangedID"" FROM Translation a JOIN ChangedTranslation b ON a.ID = b.TranslationID WHERE a.SystemEnum = {systemEnum};";
                 dce.WaitForOpen(() =>
                 {
@@ -97,7 +100,7 @@ namespace Ellab_Resource_Translater.Translators
                     source.Token.ThrowIfCancellationRequested();
                 });
                 
-                DbDataReader changedTexts = command.ExecuteReader();
+                using DbDataReader changedTexts = command.ExecuteReader();
 
                 // Load changes
                 if (changedTexts.HasRows)
@@ -110,8 +113,7 @@ namespace Ellab_Resource_Translater.Translators
                         table.Load(changedTexts);
                         dataTables.Enqueue(table);
                     }
-                    changedTexts.DisposeAsync();
-                    command.DisposeAsync();
+
                     dce.TryClose();
 
 
@@ -156,7 +158,7 @@ namespace Ellab_Resource_Translater.Translators
                     // Splits it into a Dictionary so that we can open update local files in groups instead of one change at a time.
                     currentProgress = 0;
                     maxProgresses = dataRows.Count;
-                    ConcurrentDictionary<string, List<Translation>> changesToRegister = [];
+                    ConcurrentDictionary<string, List<MetaData<string>>> changesToRegister = [];
                     void processRow(DataRow row, int dataTNumber)
                     {
                         if (row[dataColumns[dataTNumber].resource]   is string resourceValue
@@ -164,9 +166,9 @@ namespace Ellab_Resource_Translater.Translators
                             && row[dataColumns[dataTNumber].value]   is string valueValue
                             && row[dataColumns[dataTNumber].comment] is string commentValue)
                         {
-                            changesToRegister.AddOrUpdate(resourceValue, [new Translation(keyValue, valueValue, commentValue)], 
+                            changesToRegister.AddOrUpdate(resourceValue, [new MetaData<string>(keyValue, valueValue, commentValue)], 
                                 (key, orgList) => {
-                                    orgList.Add(new Translation(keyValue, valueValue, commentValue));
+                                    orgList.Add(new MetaData<string>(keyValue, valueValue, commentValue));
                                     return orgList;
                                 });
                         }
@@ -193,12 +195,12 @@ namespace Ellab_Resource_Translater.Translators
                     void processChanges(string rootPath, string transDictKey)
                     {
                         // Load Local data so we don't lose data that wasn't overriden
-                        var translations = ReadResource(string.Concat(rootPath, rootPath.EndsWith("/") ? "": "/", transDictKey));
+                        var translations = ReadResource(string.Concat(rootPath, rootPath.EndsWith('/') ? "": '/', transDictKey));
 
                         // Override in Memory
                         var changes = changesToRegister[transDictKey];
                         changes.ForEach(trans => {
-                            if(translations.TryGetValue(trans.key, out Translation? oldtrans))
+                            if(translations.TryGetValue(trans.key, out MetaData<string>? oldtrans))
                             {
                                 oldtrans.value = trans.value;
                             } else
@@ -224,16 +226,16 @@ namespace Ellab_Resource_Translater.Translators
                             Interlocked.Increment(ref currentProgress);
                         }
                     });
-                    command = dce.conn.CreateCommand();
-                    command.CommandText = $@"DELETE FROM ChangedTranslation WHERE ChangedTranslation.TranslationID in (SELECT ID FROM Translation where SystemEnum = {systemEnum});";
+                    using DbCommand deleteCommand = dce.CreateCommand();
+                    deleteCommand.CommandText = $@"DELETE FROM ChangedTranslation WHERE ChangedTranslation.TranslationID in (SELECT ID FROM Translation where SystemEnum = {systemEnum});";
                     dce.WaitForOpen(() =>
                     {
                         source.Cancel();
                         source.Token.ThrowIfCancellationRequested();
                     });
-                    command.ExecuteNonQuery();
-                    command.Dispose();
-                    dce.conn.CloseAsync();
+                    deleteCommand.ExecuteNonQuery();
+                    deleteCommand.Dispose();
+                    dce.CloseAsync();
                 }
             }
         }
@@ -305,7 +307,7 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private static DataTable CreateDataTable(int pathLength, string resource, Dictionary<string, Dictionary<string, Translation>> translations, int systemEnum)
+        private static DataTable CreateDataTable(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<string>>> translations, int systemEnum)
         {
             DataTable dataTable = new();
             dataTable.Columns.Add("ID", typeof(long));
@@ -319,14 +321,13 @@ namespace Ellab_Resource_Translater.Translators
             foreach (var item in translations)
             {
                 string language = item.Key;
-                string resourceName = resource[(pathLength + 1)..];
-                if(!item.Key.Equals("en",StringComparison.OrdinalIgnoreCase))
-                    resourceName = Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx");
+                // add language string (if not english), then cut rootPath away.
+                string resourceName = (item.Key.Equals("en", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
                 foreach (var value in item.Value)
                 {
                     string comment = value.Value.comment;
                     string key = value.Key;
-                    string text = value.Value.value; // Stonks
+                    object text = value.Value.value; // Stonks
 
                     dataTable.Rows.Add(null, // ID, should autogenerate
                                         comment,
@@ -343,9 +344,9 @@ namespace Ellab_Resource_Translater.Translators
             return dataTable;
         }
 
-        private static Dictionary<string, Translation> ReadResource(string path)
+        private static Dictionary<string, MetaData<string>> ReadResource(string path)
         {
-            Dictionary<string, Translation> trans = [];
+            Dictionary<string, MetaData<string>> trans = [];
             using (ResXResourceReader resxReader = new(path))
             {
                 using ResXResourceReader resxCommentReader = new(path);
@@ -359,7 +360,6 @@ namespace Ellab_Resource_Translater.Translators
                     foreach (DictionaryEntry entry in resxReader)
                     {
                         string key = entry.Key.ToString() ?? string.Empty;
-                        string value = entry.Value?.ToString() ?? string.Empty;
                         string comment;
 
                         // Since we have 2 readers of the same File, we can iterate over them synced by calling MoveNext only once per loop
@@ -369,9 +369,13 @@ namespace Ellab_Resource_Translater.Translators
                             comment = current?.Comment ?? string.Empty;
                         }
                         else 
-                            comment = string.Empty; 
+                            comment = string.Empty;
+                        if (entry.Value is not string)
+                            continue;
 
-                        trans.Add(key, new Translation(key, value, comment));
+                        string value = entry.Value?.ToString() ?? string.Empty;
+
+                        trans.Add(key, new MetaData<string>(key, value, comment));
                     }
                 }
                 catch
@@ -381,7 +385,7 @@ namespace Ellab_Resource_Translater.Translators
             return trans;
         }
 
-        private static void WriteResource(string path, Dictionary<string, Translation> trans)
+        private static void WriteResource(string path, Dictionary<string, MetaData<string>> trans)
         {
             using ResXResourceWriter resxWriter = new(path);
             foreach (var entry in trans)
@@ -394,10 +398,10 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private void TranslateMissingValues(Dictionary<string, Dictionary<string, Translation>> translations, string lang)
+        private void TranslateMissingValues(Dictionary<string, Dictionary<string, MetaData<string>>> translations, string lang)
         {
             // Find missing translation keys
-            List<Translation> emptyTranslations = translations[lang].Values.Where(x => x.value == string.Empty).ToList();
+            List<MetaData<string>> emptyTranslations = translations[lang].Values.Where(x => x.value is string str && str == string.Empty).ToList();
 
             // Nothing to translate? return
             if (emptyTranslations.Count == 0 || TranslationService != null)
@@ -407,7 +411,7 @@ namespace Ellab_Resource_Translater.Translators
             // Filter so we don't get errors
             // GroupBy so that dublicate values doesn't break as it becomes a key
             // Another Filter to remove the once that doesn't have a text in english (can't translate empty string)
-            Dictionary<string, Translation[]> kvp = emptyTranslations.Where(x => translations["EN"].ContainsKey(x.key))
+            Dictionary<string, MetaData<string>[]> kvp = emptyTranslations.Where(x => translations["EN"].ContainsKey(x.key))
                 .GroupBy(x => translations["EN"][x.key].value, x => x)
                 .Where(k => !k.Key.Equals(string.Empty))
                 .ToDictionary(g => g.Key, g => g.ToArray());
@@ -421,7 +425,7 @@ namespace Ellab_Resource_Translater.Translators
                 {
                     var itemST = source;
                     var transes = kvp[itemST];
-                    foreach (Translation transItem in transes)
+                    foreach (MetaData<string> transItem in transes)
                     {
                         string? text = translation[0] ?? null;
                         if (text != null)
@@ -442,7 +446,7 @@ namespace Ellab_Resource_Translater.Translators
         private void TranslateResource(HashSet<string> existing, string resource, int pathLength)
         {
             // To store the Data in each language.
-            Dictionary<string, Dictionary<string, Translation>> translations = [];
+            Dictionary<string, Dictionary<string, MetaData<string>>> translations = [];
 
             // Retrieve the English information
             translations.Add("EN", ReadResource(resource));
@@ -462,7 +466,7 @@ namespace Ellab_Resource_Translater.Translators
                 // Add all missing translations
                 foreach (string entry in translations["EN"].Keys)
                 {
-                    if (!translations[lang].TryGetValue(entry, out Translation? trans) || string.IsNullOrEmpty(trans.value))
+                    if (!translations[lang].TryGetValue(entry, out MetaData<string>? trans) || string.IsNullOrEmpty(trans.value))
                     {
                         var value = aiTrans ? string.Empty : translations["EN"][entry].value;
                         var comment = translations["EN"][entry].comment;
@@ -471,7 +475,7 @@ namespace Ellab_Resource_Translater.Translators
                         translations[lang].Remove(entry);
 
                         // Add it to the Languages Dictionary
-                        trans = new Translation(entry, value, comment);
+                        trans = new MetaData<string>(entry, value, comment);
                         translations[lang].Add(entry, trans);
                     }
                 }
@@ -492,22 +496,14 @@ namespace Ellab_Resource_Translater.Translators
             WriteToDatabase(pathLength, resource, translations);
         }
 
-        private void WriteToDatabase(int pathLength, string resource, Dictionary<string, Dictionary<string, Translation>> translations)
+        private void WriteToDatabase(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<string>>> translations)
         {
             if (dth != null)
             {
                 DataTable dataTable = CreateDataTable(pathLength, resource, translations, systemEnum);
-                dth.AddInsert(dataTable);
+                if(dataTable.Rows.Count > 0)
+                    dth.AddInsert(dataTable);
             }
-        }
-
-        private static void AddParam(DataRow row, IDBparameterable c, string name, DbType dbType)
-        {
-            var paramComment = c.CreateParameter();
-            paramComment.ParameterName = "@" + name;
-            paramComment.Value = row[name];
-            paramComment.DbType = dbType;
-            c.Parameters.Add(paramComment);
         }
     }
 }

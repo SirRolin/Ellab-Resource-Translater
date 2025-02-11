@@ -6,16 +6,16 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Objects
 {
-    internal class Translation(string key, string value, string comment)
+    internal class MetaData<Type>(string key, Type value, string comment)
     {
         public string key = key;
-        public string value = value;
+        public Type value = value;
         public string comment = comment;
 
         override
         public string ToString()
         {
-            return string.Concat(key, ": ", value, " - ", comment);
+            return string.Concat(key, ": ", value?.ToString() ?? "null", " - ", comment);
         }
     }
 }
