@@ -92,7 +92,14 @@ namespace Ellab_Resource_Translater.Translators
 
                 // Read from the DB
                 using DbCommand command = dce.CreateCommand();
-                command.CommandText = $@"SELECT a.""Key"", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as ""ChangedID"" FROM Translation a JOIN ChangedTranslation b ON a.ID = b.TranslationID WHERE a.SystemEnum = {systemEnum};";
+                command.CommandText = $@"WITH changedTranslationsLatest AS (
+                                          SELECT
+                                            *,
+                                            ROW_NUMBER() OVER(PARTITION BY TranslationID ORDER BY ID DESC) AS ReverseRowNumber
+                                          FROM ChangedTranslation
+                                        )
+                                        SELECT a.""Key"", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as ""ChangedID""
+                                        FROM Translation a JOIN changedTranslationsLatest b ON a.ID = b.TranslationID WHERE b.ReverseRowNumber = 1 and a.SystemEnum = {systemEnum};";
                 dce.WaitForOpen(() =>
                 {
                     source.Cancel();
