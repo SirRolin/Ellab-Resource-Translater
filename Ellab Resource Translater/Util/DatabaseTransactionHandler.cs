@@ -89,7 +89,7 @@ namespace Ellab_Resource_Translater.Util
                 onTransactionStart.Invoke(dce, transAct);
                 ExecutionHandler.Execute(inserters, insertToDatabaseTasks.Count, (i) =>
                 {
-                    while (insertToDatabaseTasks.TryDequeue(out var dt) || insertsPending > 0)
+                    while (insertToDatabaseTasks.TryDequeue(out var dt) || insertsPending > 0 || _waitTillStopped)
                     {
                         // if more are pending
                         if (dt != null)

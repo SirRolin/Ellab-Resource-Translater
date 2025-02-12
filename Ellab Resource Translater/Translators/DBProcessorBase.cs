@@ -193,8 +193,10 @@ namespace Ellab_Resource_Translater.Translators
                     maxProgresses = files.Count;
                     void processChanges(string rootPath, string transDictKey)
                     {
+                        var resourcePath = string.Concat(rootPath, rootPath.EndsWith('/') ? "" : '/', transDictKey);
+
                         // Load Local data so we don't lose data that wasn't overriden
-                        var translations = ReadResource<object?>(string.Concat(rootPath, rootPath.EndsWith('/') ? "": '/', transDictKey));
+                        var translations = ReadResource<object?>(resourcePath);
 
                         // Override in Memory
                         var changes = changesToRegister[transDictKey];
@@ -209,7 +211,7 @@ namespace Ellab_Resource_Translater.Translators
                         });
 
                         // Save to Local Data
-                        WriteResource(rootPath, translations);
+                        WriteResource(resourcePath, translations);
                     }
 
                     ExecutionHandler.Execute(maxThreads, maxProgresses, (i) =>
