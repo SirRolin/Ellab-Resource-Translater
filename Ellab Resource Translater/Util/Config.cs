@@ -55,15 +55,15 @@ namespace Ellab_Resource_Translater.Util
             return this;
         }
         [JsonConstructor]
-        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse, int connectionsToUse, Size? MainWindowSize, Size? SettingWindowSize, bool closeOnceDone)
+        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse, int insertersToUse, Size? MainWindowSize, Size? SettingWindowSize, bool closeOnceDone)
         {
-            this.EMPath = eMPath;
-            this.ValPath = ValPath;
-            this.languagesToTranslate = languagesToTranslate;
-            this.languagesToAiTranslate = languagesToAiTranslate;
+            this.EMPath = eMPath ?? this.EMPath;
+            this.ValPath = ValPath ?? this.ValPath;
+            this.languagesToTranslate = languagesToTranslate ?? this.languagesToTranslate;
+            this.languagesToAiTranslate = languagesToAiTranslate ?? this.languagesToAiTranslate;
             this.threadsToUse = threadsToUse;
-            this.insertersToUse = connectionsToUse;
-            this.MainWindowSize = MainWindowSize ?? new(900, 650); ;
+            this.insertersToUse = insertersToUse;
+            this.MainWindowSize = MainWindowSize ?? new(900, 650);
             this.SettingWindowSize = SettingWindowSize ?? new(600, 400);
             this.closeOnceDone = closeOnceDone;
         }

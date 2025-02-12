@@ -233,12 +233,16 @@ namespace Ellab_Resource_Translater
         {
             progressTitle.Invoke(() => progressTitle.Text = "Val Suite");
             var config = Config.Get();
-            if (config.ValPath != "")
+            if (config.ValPath != null && config.ValPath != "" && !source.IsCancellationRequested)
             {
-                ValSuite val = new(transServ, connProv, source);
-                val.Run(config.ValPath, progressListView, progressTracker);
-            }
-            else if (batching == true)
+                try
+                {
+                    ValSuite val = new(transServ, connProv, source);
+                    val.Run(config.ValPath, progressListView, progressTracker);
+                }
+                catch (OperationCanceledException){}
+
+            } else if (batching == true)
             {
                 DialogResult shouldWeContinue = MessageBox.Show("Check ValSuite path in Settings.\nShould we continue with the rest?", "Val suite Path Missing!", MessageBoxButtons.YesNo);
                 if (shouldWeContinue != DialogResult.Yes) source.Cancel();
@@ -298,25 +302,22 @@ namespace Ellab_Resource_Translater
         {
             progressTitle.Invoke(() => progressTitle.Text = "EM Suite");
             var config = Config.Get();
-            if (config.EMPath != "")
+            if (config.EMPath != null && config.EMPath != "" && !source.IsCancellationRequested)
             {
                 try
                 {
                     EMSuite emsuite = new(transServ, connProv, source);
                     emsuite.Run(config.EMPath, progressListView, progressTracker);
                 }
-                catch (OperationCanceledException)
-                {
-                    if (batching == true)
-                    {
-                        DialogResult shouldWeContinue = MessageBox.Show("Check EMSuite path in Settings.\nShould we continue with the rest?", "EM suite Path Missing!", MessageBoxButtons.YesNo);
-                        if (shouldWeContinue != DialogResult.Yes) source.Cancel();
-                    }
-                    else
-                    {
-                        MessageBox.Show("Check EMSuite path in Settings", "EM suite path Missing", MessageBoxButtons.OK);
-                    }
-                }
+                catch (OperationCanceledException){}
+            } else if (batching == true)
+            {
+                DialogResult shouldWeContinue = MessageBox.Show("Check EMSuite path in Settings.\nShould we continue with the rest?", "EM suite Path Missing!", MessageBoxButtons.YesNo);
+                if (shouldWeContinue != DialogResult.Yes) source.Cancel();
+            }
+            else
+            {
+                MessageBox.Show("Check EMSuite path in Settings", "EM suite path Missing", MessageBoxButtons.OK);
             }
         }
 
