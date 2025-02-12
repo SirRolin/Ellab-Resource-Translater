@@ -361,4 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Custom Added
 /Ellab Resource Translater/SQL/Debug SQL.sql
+/Ellab Resource Translater/bin/Release/*
