@@ -44,15 +44,11 @@ namespace Ellab_Resource_Translater.Util
 
         // Singleton instanciation accessed with Get()
         private static Config? instance;
-        private Config() {
-        }
-
-        private Config Setup()
+        private Config()
         {
             this.languagesToTranslate = defaultLanguages.Select(x => x.Key).ToList();
             this.languagesToAiTranslate = defaultLanguages.Select(x => x.Key).ToList();
             this.languagesToAiTranslate.RemoveAll(x => languagesNotToAi.Contains(x));
-            return this;
         }
         [JsonConstructor]
         public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse, int insertersToUse, Size? MainWindowSize, Size? SettingWindowSize, bool closeOnceDone)
@@ -82,9 +78,9 @@ namespace Ellab_Resource_Translater.Util
                     Debug.WriteLine(e);
                 } // If the saved config is incompatible with the current version it will throw an error instead of loading
             }
-            
+
             // new setup
-            instance ??= new Config().Setup();
+            instance ??= new Config();
 
             return instance;
         }
