@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Util
 {
-    internal class FormUtils
+    public class FormUtils
     {
         public static void SaveCheckBoxListLocalised(List<string> list, CheckedListBox checkedListBox, Dictionary<string, string> localiser)
         {

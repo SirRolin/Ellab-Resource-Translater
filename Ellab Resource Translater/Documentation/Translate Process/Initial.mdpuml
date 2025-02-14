@@ -16,9 +16,9 @@ state Iterate_Files {
 
     Check_Translation_File --> Translate : Doesn't Exist & AI Allowed
     Check_Translation --> Translate : Not Translated & AI Allowed
+    Check_Translation --> Upload : Translated
 
     Translate --> Upload
-    Read_Translation --> Upload
   }
 
   Upload --> [*]
