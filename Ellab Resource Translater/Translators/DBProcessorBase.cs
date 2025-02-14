@@ -95,6 +95,7 @@ namespace Ellab_Resource_Translater.Translators
         /// <param name="view">the ViewList that shows which items are being processed atm.</param>
         /// <param name="progresText">The Label that is updated with the progres</param>
         /// <exception cref="NotImplementedException"></exception>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0306:Simplify collection initialization", Justification = "it's a lie, collection initialization doesn't work for ConcurrentQueues")]
         private void UpdateLocalFiles(string path, ListView view, Label progresText)
         {
             // Update UI
@@ -465,7 +466,7 @@ namespace Ellab_Resource_Translater.Translators
         private void TranslateMissingValues(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang)
         {
             // Find missing translation keys
-            List<MetaData<object?>> emptyTranslations = translations[lang].Values.Where(x => x.value is string str && str == string.Empty).ToList();
+            List<MetaData<object?>> emptyTranslations = [.. translations[lang].Values.Where(x => x.value is string str && str == string.Empty)];
 
             // Nothing to translate? return
             if (emptyTranslations.Count == 0 || TranslationService != null)
