@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Interfaces
 {
-    internal interface IDBparameterable
+    public interface IDBparameterable
     {
         DbParameter CreateParameter();
         DbParameterCollection Parameters { get; }

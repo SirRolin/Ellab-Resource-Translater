@@ -97,7 +97,7 @@ namespace Ellab_Resource_Translater.Util
                             if (token.IsCancellationRequested)
                                 break;
                             string resource = getResourceName.Invoke(dt);
-                            FormUtils.HandleProcess(updateProgresText, listView, resource, () => process(dce, transAct, dt));
+                            FormUtils.ShowOnListWhileProcessing(updateProgresText, listView, resource, () => process(dce, transAct, dt));
                         } else
                         {
                             Task.Delay(100).Wait();

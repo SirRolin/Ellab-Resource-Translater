@@ -44,29 +44,35 @@ namespace Ellab_Resource_Translater.Util
                 (checkedListBox.MaximumSize.Height <= 0 ? 1 : (height / checkedListBox.MaximumSize.Height));
             checkedListBox.Size = new System.Drawing.Size(width, height);
         }
-        public static void HandleProcess(Action update, ListView listView, string resourceName, Action process)
+        public static void ShowOnListWhileProcessing(Action update, ListView listView, string resourceName, Action process)
         {
-            HandleProcess((s) => s, update, listView, resourceName, process);
+            ShowOnListWhileProcessing((s) => s, update, listView, resourceName, process);
         }
 
-        public static void HandleProcess(int pathLength, Action update, ListView listView, string resourceName, Action process)
+        public static void ShowOnListWhileProcessing(int pathLength, Action update, ListView listView, string resourceName, Action process)
         {
-            HandleProcess(pathLength, update, listView, resourceName, () => { process(); return string.Empty; });
+            ShowOnListWhileProcessing((s) => s[(pathLength + 1)..], update, listView, resourceName, process);
         }
 
-        public static void HandleProcess(Func<string, string> getResource, Action update, ListView listView, string resourceName, Action process)
+        public static void ShowOnListWhileProcessing(Func<string, string> getResource, Action update, ListView listView, string resourceName, Action process)
         {
-            HandleProcess(getResource, update, listView, resourceName, () => { process(); return string.Empty; });
+            string shortenedPath = getResource(resourceName);
+            ListViewItem listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
+
+            process();
+
+            listView.Invoke(() => listView.Items.Remove(listViewItem));
+            update.Invoke();
         }
 
-        public static TResult HandleProcess<TResult>(int pathLength, Action update, ListView listView, string resourceName, Func<TResult> process)
+        public static TResult ShowOnListWhileProcessing<TResult>(int pathLength, Action update, ListView listView, string resourceName, Func<TResult> process)
         {
-            return HandleProcess((s) => s[(pathLength+1)..], update, listView, resourceName, process);
+            return ShowOnListWhileProcessing((s) => s[(pathLength+1)..], update, listView, resourceName, process);
         }
 
-        public static TResult HandleProcess<TResult>(Func<string, string> getResource, Action update, ListView listView, string resourceName, Func<TResult> process)
+        public static TResult ShowOnListWhileProcessing<TResult>(Func<string, string> getResource, Action update, ListView listView, string resourceName, Func<TResult> process)
         {
-            string shortenedPath = getResource(resourceName); // Remove the root path
+            string shortenedPath = getResource(resourceName);
             ListViewItem listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
 
             var output = process();

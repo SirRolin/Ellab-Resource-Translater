@@ -39,6 +39,9 @@ namespace Ellab_Resource_Translater.Translators
                     c.CommandText = $@"DELETE a FROM Translation a where a.SystemEnum = {systemEnum} AND NOT a.ID in (Select ct.TranslationID from ChangedTranslation ct);";
                     c.ExecuteNonQuery();
                     c.Dispose();
+
+                    // Read, Translate, Write & prepare dth.
+                    SetupTasks(path, view, progresText, regex);
                 };
             }
 
@@ -70,8 +73,6 @@ namespace Ellab_Resource_Translater.Translators
                     addParameters: addParameters(),
                     inserters: Config.Get().insertersToUse);
 
-            // Read, Translate, Write & prepare dth.
-            SetupTasks(path, view, progresText, regex);
 
             // Starts transfer to Database
             if (connProv != null && !token.IsCancellationRequested)
@@ -214,7 +215,7 @@ namespace Ellab_Resource_Translater.Translators
             {
                 while (files.TryDequeue(out var resourceName))
                 {
-                    FormUtils.HandleProcess(
+                    FormUtils.ShowOnListWhileProcessing(
                         pathLength: -1, // -1 to disable 
                         update: () => myUpdate(TITLE, currentProgress, fileCount),
                         listView: view,
@@ -257,7 +258,7 @@ namespace Ellab_Resource_Translater.Translators
             {
                 while (dataRows.TryDequeue(out var rowData))
                 {
-                    FormUtils.HandleProcess(
+                    FormUtils.ShowOnListWhileProcessing(
                         update: () => myUpdate(TITLE, currentProgress, rowCount),
                         listView: view,
                         resourceName: i + ") Fetching Data...",
@@ -299,7 +300,7 @@ namespace Ellab_Resource_Translater.Translators
             {
                 while (dataTables.TryDequeue(out DataTable? table))
                 {
-                    FormUtils.HandleProcess(
+                    FormUtils.ShowOnListWhileProcessing(
                         update: () => myUpdate(TITLE, currentProgress, tableCount),
                         listView: view,
                         resourceName: i + ") Fetching Data...",
@@ -325,7 +326,6 @@ namespace Ellab_Resource_Translater.Translators
             }
             updateProgresText();
 
-            // Execution Time
             void onFailing(AggregateException ae)
             {
                 foreach (Exception e in ae.InnerExceptions)
@@ -336,6 +336,7 @@ namespace Ellab_Resource_Translater.Translators
                         Console.WriteLine("Exception: " + e.GetType().Name);
                 }
             }
+            // Execution Time
             ExecutionHandler.TryExecute(maxThreads, allResources.Count,
                     action: (i) => ProcessQueue(rootPathLength: path.Length,
                                                                queue: englishQueuedFiles,
@@ -348,30 +349,25 @@ namespace Ellab_Resource_Translater.Translators
 
         private void ProcessQueue(int rootPathLength, ConcurrentQueue<string> queue, HashSet<string> existingResources, Action update, ListView listView)
         {
-            while (!source.IsCancellationRequested)
+            while (!source.IsCancellationRequested && queue.TryDequeue(out var resource))
             {
-                if (queue.TryDequeue(out var resource))
+                void TryTranslateResource()
                 {
-                    void TryTranslateResource()
+                    try
                     {
-                        try
+                        TranslateResource(existingResources, resource, rootPathLength);
+                    }
+                    catch (AggregateException ae)
+                    {
+                        if (!source.IsCancellationRequested)
                         {
-                            TranslateResource(existingResources, resource, rootPathLength);
-                        }
-                        catch (AggregateException ae)
-                        {
-                            if (!source.IsCancellationRequested)
-                            {
-                                source.Cancel();
-                                Debug.WriteLine(ae.Message);
-                                MessageBox.Show("Translations used up for now. Try again later.");
-                            }
+                            source.Cancel();
+                            Debug.WriteLine(ae.Message);
+                            MessageBox.Show("Translations used up for now. Try again later.");
                         }
                     }
-                    FormUtils.HandleProcess(rootPathLength, update, listView, resource, TryTranslateResource);
                 }
-                else
-                    break;
+                FormUtils.ShowOnListWhileProcessing(rootPathLength, update, listView, resource, TryTranslateResource);
             }
         }
 
