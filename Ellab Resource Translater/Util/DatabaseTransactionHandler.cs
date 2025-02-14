@@ -29,7 +29,7 @@ namespace Ellab_Resource_Translater.Util
     /// <param name="commandText">SQL Query</param>
     /// <param name="addParameters">How we add the parameters to the command.</param>
     /// <param name="inserters">How many threads to use, runs in parallel if not positive.</param>
-    internal class DatabaseTransactionHandler(CancellationTokenSource source, Action<DbConnection, DbTransaction?> onTransactionStart, string commandText, Action<DataRow, IDBparameterable> addParameters, int inserters = 4)
+    public class DatabaseTransactionHandler(CancellationTokenSource source, Action<DbConnection, DbTransaction?> onTransactionStart, string commandText, Action<DataRow, IDBparameterable> addParameters, int inserters = 4)
     {
         private readonly ConcurrentQueue<DataTable> insertToDatabaseTasks = [];
         private readonly object lockObj = new();
@@ -141,8 +141,7 @@ namespace Ellab_Resource_Translater.Util
                 {
                     var c = s.CreateBatchCommand();
                     c.CommandText = commandText;
-                    DBBatchCommandWrapper cwrapped = new(c);
-                    addParameters(row, cwrapped);
+                    addParameters(row, (DBBatchCommandWrapper) c);
                     s.BatchCommands.Add(c);
                 }
 
@@ -185,7 +184,7 @@ namespace Ellab_Resource_Translater.Util
                 if (trans != null)
                     command.Transaction = trans;
 
-                DBCommandWrapper wrappedCommand = new(command);
+                DBCommandWrapper wrappedCommand = command;
 
                 foreach (DataRow row in dataTable.Rows)
                 {

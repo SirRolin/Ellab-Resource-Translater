@@ -3,9 +3,9 @@ title Translation Process
 
 start
 
-group Transaction
-
 :start transaction;
+
+group Transaction
 
 group Update local #lightgreen
 
@@ -29,6 +29,8 @@ repeat while
 
 end group
 
+:Disconnect from DB; <<task>>
+
 end group
 
 group Translate #lightblue
@@ -36,6 +38,8 @@ group Translate #lightblue
 :Find Resource files in all subfolders; <<procedure>>
 
 :Copy & Filter to english files;
+
+:Connect to DB; <<task>>
 
 group <color:purple> possibly multi-thread
 

@@ -16,7 +16,7 @@ namespace Ellab_Resource_Translater.Util
     /// This is Thread-safe.
     /// </remarks>
     /// <param name="connectionString">a string supported by <see cref="DBStringHandler.CreateDbConnection(string)"/>, Types can be seen in <see cref="Enums.ConnType"/></param>
-    internal class ConnectionProvider(string connectionString) : IDisposable
+    public class ConnectionProvider(string connectionString) : IDisposable
     {
         private readonly List<DbConnection> dces = [];
         private readonly object lockObject = new();

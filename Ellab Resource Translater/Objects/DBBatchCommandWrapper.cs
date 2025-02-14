@@ -8,13 +8,18 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Objects
 {
-    internal class DBBatchCommandWrapper(DbBatchCommand command) : IDBparameterable
+    public class DBBatchCommandWrapper(DbBatchCommand command) : IDBparameterable
     {
+        private readonly DbBatchCommand command = command;
+
         public DbParameterCollection Parameters => command.Parameters;
 
         public DbParameter CreateParameter()
         {
             return command.CreateParameter();
         }
+
+        public static implicit operator DbBatchCommand(DBBatchCommandWrapper cbdw) => cbdw.command;
+        public static implicit operator DBBatchCommandWrapper(DbBatchCommand ccd) => new(ccd);
     }
 }

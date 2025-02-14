@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 
 namespace Ellab_Resource_Translater.Translators
 {
-    internal class DBProcessorBase(TranslationService? TranslationService, ConnectionProvider? connProv, CancellationTokenSource source, int systemEnum, int maxThreads = 32)
+    public class DBProcessorBase(TranslationService? TranslationService, ConnectionProvider? connProv, CancellationTokenSource source, int systemEnum, int maxThreads = 32)
     {
         private readonly Config config = Config.Get();
 
@@ -115,6 +115,7 @@ namespace Ellab_Resource_Translater.Translators
                                         )
                                         SELECT a.""Key"", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as ""ChangedID""
                                         FROM Translation a JOIN changedTranslationsLatest b ON a.ID = b.TranslationID WHERE b.ReverseRowNumber = 1 and a.SystemEnum = {systemEnum};";
+                
                 dce.WaitForOpen(() =>
                 {
                     source.Cancel();
@@ -212,12 +213,11 @@ namespace Ellab_Resource_Translater.Translators
                 // Save to Local Data
                 WriteResource(resourcePath, translations);
             }
-            ExecutionHandler.Execute(maxThreads, fileCount, (i) =>
+            ExecutionHandler.Execute(maxThreads, fileCount, (int i) =>
             {
                 while (files.TryDequeue(out var resourceName))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        pathLength: -1, // -1 to disable 
                         update: () => myUpdate(TITLE, currentProgress, fileCount),
                         listView: view,
                         resourceName: i + ") Fetching Data...",
@@ -255,14 +255,14 @@ namespace Ellab_Resource_Translater.Translators
                         });
                 }
             }
-            ExecutionHandler.Execute(maxThreads, rowCount, (i) =>
+            ExecutionHandler.Execute(maxThreads, rowCount, (threadNum) =>
             {
                 while (dataRows.TryDequeue(out var rowData))
                 {
                     FormUtils.ShowOnListWhileProcessing(
                         update: () => myUpdate(TITLE, currentProgress, rowCount),
                         listView: view,
-                        resourceName: i + ") Fetching Data...",
+                        resourceName: threadNum + ") Fetching Data...",
                         process: () => processRow(rowData.row, rowData.dataTNum));
                     Interlocked.Increment(ref currentProgress);
                 }
@@ -297,14 +297,14 @@ namespace Ellab_Resource_Translater.Translators
                     }
                 }
             }
-            ExecutionHandler.Execute(tableCount, maxThreads, (i) =>
+            ExecutionHandler.Execute(tableCount, maxThreads, (int threadNum) =>
             {
                 while (dataTables.TryDequeue(out DataTable? table))
                 {
                     FormUtils.ShowOnListWhileProcessing(
                         update: () => myUpdate(TITLE, currentProgress, tableCount),
                         listView: view,
-                        resourceName: i + ") Fetching Data...",
+                        resourceName: threadNum + ") Fetching Data...",
                         process: () => processTable(table));
                 }
             });
@@ -372,46 +372,6 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private static DataTable CreateDataTable(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<object?>>> translations, int systemEnum)
-        {
-            DataTable dataTable = new();
-            dataTable.Columns.Add("ID", typeof(long));
-            dataTable.Columns.Add("Comment", typeof(string));
-            dataTable.Columns.Add("Key", typeof(string));
-            dataTable.Columns.Add("LanguageCode", typeof(string));
-            dataTable.Columns.Add("ResourceName", typeof(string));
-            dataTable.Columns.Add("Text", typeof(string));
-            dataTable.Columns.Add("IsTranlatedInValSuite", typeof(bool)); // The Spelling Error is on the Database
-            dataTable.Columns.Add("SystemEnum", typeof(int));
-            foreach (var item in translations)
-            {
-                string language = item.Key;
-                // add language string (if not english), then cut rootPath away.
-                string resourceName = (item.Key.Equals("en", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
-                foreach (var value in item.Value)
-                {
-                    // it's only useful to send strings up
-                    if (value.Value.value is not string)
-                        continue;
-                    string comment = value.Value.comment;
-                    string key = value.Key;
-                    object text = value.Value.value; // Stonks
-
-                    dataTable.Rows.Add(null, // ID, should autogenerate
-                                        comment,
-                                        key,
-                                        language,
-                                        resourceName,
-                                        text,
-                                        false,
-                                        systemEnum
-                                        );
-                }
-            }
-
-            return dataTable;
-        }
-
         private static Dictionary<string, MetaData<Type>> ReadResource<Type>(string path)
         {
             Dictionary<string, MetaData<Type>> trans = [];
@@ -455,11 +415,7 @@ namespace Ellab_Resource_Translater.Translators
             using ResXResourceWriter resxWriter = new(path);
             foreach (var entry in trans)
             {
-                ResXDataNode node = new(entry.Key, entry.Value.value)
-                {
-                    Comment = entry.Value.comment
-                };
-                resxWriter.AddResource(node);
+                resxWriter.AddResource(entry.Value);
             }
         }
 
@@ -571,6 +527,46 @@ namespace Ellab_Resource_Translater.Translators
                 if(dataTable.Rows.Count > 0)
                     dth.AddInsert(dataTable);
             }
+        }
+
+        private static DataTable CreateDataTable(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<object?>>> translations, int systemEnum)
+        {
+            DataTable dataTable = new();
+            dataTable.Columns.Add("ID", typeof(long));
+            dataTable.Columns.Add("Comment", typeof(string));
+            dataTable.Columns.Add("Key", typeof(string));
+            dataTable.Columns.Add("LanguageCode", typeof(string));
+            dataTable.Columns.Add("ResourceName", typeof(string));
+            dataTable.Columns.Add("Text", typeof(string));
+            dataTable.Columns.Add("IsTranlatedInValSuite", typeof(bool)); // The Spelling Error is on the Database
+            dataTable.Columns.Add("SystemEnum", typeof(int));
+            foreach (var item in translations)
+            {
+                string language = item.Key;
+                // add language string (if not english), then cut rootPath away.
+                string resourceName = (item.Key.Equals("en", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
+                foreach (var value in item.Value)
+                {
+                    // it's only useful to send strings up
+                    if (value.Value.value is not string)
+                        continue;
+                    string comment = value.Value.comment;
+                    string key = value.Key;
+                    object text = value.Value.value; // Stonks
+
+                    dataTable.Rows.Add(null, // ID, should autogenerate
+                                        comment,
+                                        key,
+                                        language,
+                                        resourceName,
+                                        text,
+                                        false,
+                                        systemEnum
+                                        );
+                }
+            }
+
+            return dataTable;
         }
     }
 }
