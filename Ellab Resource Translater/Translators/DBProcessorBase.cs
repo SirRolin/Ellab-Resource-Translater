@@ -194,7 +194,7 @@ namespace Ellab_Resource_Translater.Translators
                 var resourcePath = string.Concat(rootPath, rootPath.EndsWith('/') ? "" : '/', transDictKey);
 
                 // Load Local data so we don't lose data that wasn't overriden
-                var translations = ReadResource<object?>(resourcePath);
+                var translations = ResourceHandler.ReadResource<object?>(resourcePath);
 
                 // Override in Memory
                 var changes = changesToRegister[transDictKey];
@@ -211,7 +211,7 @@ namespace Ellab_Resource_Translater.Translators
                 });
 
                 // Save to Local Data
-                WriteResource(resourcePath, translations);
+                ResourceHandler.WriteResource(resourcePath, translations);
             }
             ExecutionHandler.Execute(maxThreads, fileCount, (int i) =>
             {
@@ -372,53 +372,6 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private static Dictionary<string, MetaData<Type>> ReadResource<Type>(string path)
-        {
-            Dictionary<string, MetaData<Type>> trans = [];
-            using (ResXResourceReader resxReader = new(path))
-            {
-                using ResXResourceReader resxCommentReader = new(path);
-                // Switches to reading metaData instead of values, can't have both, which we need for comments
-                resxCommentReader.UseResXDataNodes = true;
-
-                // Found out that some files are simply broken which will cause this to throw an error when it reaches the end of the file.
-                try
-                {
-                    var enumerator = resxCommentReader.GetEnumerator();
-                    foreach (DictionaryEntry entry in resxReader)
-                    {
-                        string key = entry.Key.ToString() ?? string.Empty;
-                        string comment;
-
-                        // Since we have 2 readers of the same File, we can iterate over them synced by calling MoveNext only once per loop
-                        if (enumerator.MoveNext())
-                        {
-                            ResXDataNode? current = (ResXDataNode?)((DictionaryEntry)enumerator.Current).Value;
-                            comment = current?.Comment ?? string.Empty;
-                        }
-                        else 
-                            comment = string.Empty;
-
-                        if(entry.Value is Type value)
-                            trans.Add(key, new MetaData<Type>(key, value, comment));
-                    }
-                }
-                catch
-                {
-                }
-            }
-            return trans;
-        }
-
-        private static void WriteResource(string path, Dictionary<string, MetaData<object?>> trans)
-        {
-            using ResXResourceWriter resxWriter = new(path);
-            foreach (var entry in trans)
-            {
-                resxWriter.AddResource(entry.Value);
-            }
-        }
-
         private void TranslateMissingValues(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang)
         {
             // Find missing translation keys
@@ -472,7 +425,7 @@ namespace Ellab_Resource_Translater.Translators
             Dictionary<string, Dictionary<string, MetaData<object?>>> translations = [];
 
             // Retrieve the English information
-            translations.Add("EN", ReadResource<object?>(resource));
+            translations.Add("EN", ResourceHandler.ReadResource<object?>(resource));
 
             // Translations work
             var langs = config.languagesToTranslate.ToArray();
@@ -484,7 +437,7 @@ namespace Ellab_Resource_Translater.Translators
                 if (!existing.Contains(langPath))
                     translations.Add(lang, []);
                 else
-                    translations.Add(lang, ReadResource<object?>(langPath));
+                    translations.Add(lang, ResourceHandler.ReadResource<object?>(langPath));
 
                 // Add all missing translations
                 foreach (string entry in translations["EN"].Keys)
@@ -512,7 +465,7 @@ namespace Ellab_Resource_Translater.Translators
             foreach (var item in translations)
             {
                 if (!item.Key.Equals("EN"))
-                    WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
+                    ResourceHandler.WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
             }
 
             // Try to write to the Database
