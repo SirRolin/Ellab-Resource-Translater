@@ -372,17 +372,11 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-
-        private void TranslateResource(HashSet<string> existing, string resource, int pathLength)
+        private void TranslateResource(HashSet<string> existingFiles, string resource, int pathLength)
         {
+            // Translations work
             var langs = config.languagesToTranslate.ToArray();
-            var langsToAi = langs.Intersect(config.languagesToAiTranslate);
-            var translations = ResourceHandler.GetAllLangResources(existing: existing,
-                                                                   resource: resource,
-                                                                   langs: langs,
-                                                                   langsToAi: langsToAi,
-                                                                   translationService: TranslationService);
-
+            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = TranslationService.TranslateResource(existingFiles, resource, langs, Config.Get().languagesToAiTranslate);
 
             // Save Translations
             foreach (var item in translations)

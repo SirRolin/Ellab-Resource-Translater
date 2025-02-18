@@ -25,7 +25,7 @@ namespace Ellab_Resource_Translater
             InitializeComponent();
         }
 
-        private void updateConnectionStatus(string connectionStringState)
+        private void UpdateConnectionStatus(string connectionStringState)
         {
             connectionStatus.Invoke(() => connectionStatus.Text = string.Concat("DB ", connectionStringState));
         }
@@ -68,7 +68,7 @@ namespace Ellab_Resource_Translater
                 if (connString != null)
                 {
                     connProv = new(connString);
-                    updateConnectionStatus("Test...");
+                    UpdateConnectionStatus("Test...");
                     
                     try
                     {
@@ -76,20 +76,20 @@ namespace Ellab_Resource_Translater
                         await conn.OpenAsync();
                         if (conn.State == System.Data.ConnectionState.Open)
                         {
-                            updateConnectionStatus("Can Connect");
+                            UpdateConnectionStatus("Can Connect");
                         }
                         await conn.CloseAsync();
                     }
                     catch (Exception ex)
                     {
-                        updateConnectionStatus(ex.Message);
+                        UpdateConnectionStatus(ex.Message);
                         return;
                     }
                     return;
                 }
                 else
                 {
-                    updateConnectionStatus("Need Setup:");
+                    UpdateConnectionStatus("Need Setup:");
                 }
 
                 // Reenabling the refresh
@@ -208,7 +208,13 @@ namespace Ellab_Resource_Translater
 
                 await Task.Run(() => ValSuite_Init(translationService, cancelTSource));
 
-                progressTitle.Invoke(() => progressTitle.Text = cancelTSource.IsCancellationRequested ? "Request Cancelled" : "Request Done");
+                try
+                {
+                    progressTitle.Invoke(() => progressTitle.Text = cancelTSource.IsCancellationRequested ? "Request Cancelled" : "Request Done");
+                } catch (InvalidOperationException)
+                {
+                    // Closed form before process finished.
+                }
 
                 if (!cancelTSource.IsCancellationRequested && Config.Get().closeOnceDone)
                     Close();
