@@ -6,6 +6,7 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Resources;
 using System.Text.RegularExpressions;
 
@@ -376,12 +377,12 @@ namespace Ellab_Resource_Translater.Translators
         {
             // Translations work
             var langs = config.languagesToTranslate.ToArray();
-            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = TranslationService.TranslateResource(existingFiles, resource, langs, Config.Get().languagesToAiTranslate);
+            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = ResourceHandler.GetAllLangResources(existingFiles, resource, langs, Config.Get().languagesToAiTranslate, TranslationService);
 
             // Save Translations
             foreach (var item in translations)
             {
-                if (!item.Key.Equals("EN"))
+                if (!item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase))
                     ResourceHandler.WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
             }
 
@@ -394,13 +395,18 @@ namespace Ellab_Resource_Translater.Translators
         {
             if (dth != null)
             {
-                DataTable dataTable = CreateDataTable(pathLength, resource, translations, systemEnum);
-                if(dataTable.Rows.Count > 0)
-                    dth.AddInsert(dataTable);
+                // Filter to only be strings as others don't need translating
+                var toUpload = translations.Select(lang => new KeyValuePair<string, Dictionary<string, MetaData<string>>>(lang.Key, MetaData<string>.FilterTo(lang.Value)))
+                                           .ToDictionary();
+                if (toUpload != null) {
+                    DataTable dataTable = CreateDataTable<string>(pathLength, resource, toUpload, systemEnum);
+                    if (dataTable.Rows.Count > 0)
+                        dth.AddInsert(dataTable);
+                }
             }
         }
 
-        private static DataTable CreateDataTable(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<object?>>> translations, int systemEnum)
+        private static DataTable CreateDataTable<T>(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<T>>> translations, int systemEnum)
         {
             DataTable dataTable = new();
             dataTable.Columns.Add("ID", typeof(long));
@@ -415,7 +421,7 @@ namespace Ellab_Resource_Translater.Translators
             {
                 string language = item.Key;
                 // add language string (if not english), then cut rootPath away.
-                string resourceName = (item.Key.Equals("en", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
+                string resourceName = (item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
                 foreach (var value in item.Value)
                 {
                     // it's only useful to send strings up

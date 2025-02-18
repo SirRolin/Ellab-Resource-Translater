@@ -60,29 +60,29 @@ namespace Ellab_Resource_Translater.Util
         public void StartCommands(ConnectionProvider connProv, Label progresText, ListView listView, Func<DataTable, string> getResourceName, bool waitTillStopped = false)
         {
             _waitTillStopped = waitTillStopped;
-            int currentProcessed = -1;
-            int maxProcesses = insertToDatabaseTasks.Count;
-            // Doing this so we don't have to pass both a int ref and a Label ref
-            void updateProgresText()
-            {
-                Interlocked.Increment(ref currentProcessed);
-                FormUtils.LabelTextUpdater(progresText, "Inserting ", currentProcessed, " out of ", maxProcesses, " into database.");
-            }
-            updateProgresText();
             using var dce = connProv.Get();
 
-            bool process(DbConnection dce, DbTransaction? transAct, DataTable item)
+            bool process(DbConnection dce, DbTransaction? transAct, DataTable item, Action<int, int> updater)
             {
                 if (token.IsCancellationRequested)
                     return false;
                 else
-                    BuildAndExecute(dce, item, transAct);
+                    BuildAndExecute(dce, item, transAct, updater);
                 return true;
             }
 
             void execution(DbTransaction? transAct)
             {
                 onTransactionStart.Invoke(dce, transAct);
+                int currentProcessed = -1;
+                //int maxProcesses = insertToDatabaseTasks.Count;
+                // Doing this so we don't have to pass both a int ref and a Label ref
+                void updateProgresText()
+                {
+                    Interlocked.Increment(ref currentProcessed);
+                    FormUtils.LabelTextUpdater(progresText, "Inserting ", currentProcessed, " out of ", (1 + insertToDatabaseTasks.Count + currentProcessed), " into database.");
+                }
+                updateProgresText();
                 ExecutionHandler.Execute(inserters, insertToDatabaseTasks.Count, (i) =>
                 {
                     while (insertToDatabaseTasks.TryDequeue(out var dt) || insertsPending > 0 || _waitTillStopped)
@@ -93,7 +93,26 @@ namespace Ellab_Resource_Translater.Util
                             if (token.IsCancellationRequested)
                                 break;
                             string resource = getResourceName.Invoke(dt);
-                            FormUtils.ShowOnListWhileProcessing(updateProgresText, listView, resource, () => process(dce, transAct, dt));
+                            FormUtils.ShowOnListWhileProcessing((s) => s,
+                                updateProgresText,
+                                listView,
+                                resource,
+                                (ListViewItem lvi) => {
+                                    try
+                                    {
+                                        process(dce, transAct, dt, (cur, outOf) => listView.Invoke(() =>
+                                        {
+                                            lvi.Text = string.Concat(resource, " (", cur, " / ", outOf, ")");
+                                        }));
+                                    }
+                                    catch (OperationCanceledException)
+                                    {
+                                        // Operation Cancelled by user
+                                    }
+                                    return true;
+                                });
+                            if (token.IsCancellationRequested)
+                                break;
                         } else
                         {
                             Task.Delay(100).Wait();
@@ -122,10 +141,14 @@ namespace Ellab_Resource_Translater.Util
             return output;
         }
 
-        private void BuildAndExecute(DbConnection DBCon, DataTable dataTable, DbTransaction? trans)
+        private void BuildAndExecute(DbConnection DBCon, DataTable dataTable, DbTransaction? trans, Action<int,int> update)
         {
             bool batchFailed = false;
             Task PreviousTask = Task.CompletedTask;
+            // Initial Report of Progress.
+            var i = 0;
+            update(i, dataTable.Rows.Count);
+
             // Upload to the Database
             if (DBCon.CanCreateBatch)
             {
@@ -140,6 +163,12 @@ namespace Ellab_Resource_Translater.Util
                     c.CommandText = commandText;
                     addParameters(row, (DBBatchCommandWrapper) c);
                     s.BatchCommands.Add(c);
+
+                    // Report Progress
+                    Interlocked.Increment(ref i);
+                    update(i, dataTable.Rows.Count);
+
+                    token.ThrowIfCancellationRequested();
                 }
 
                 // Sometimes there's nothing to upload
@@ -182,23 +211,28 @@ namespace Ellab_Resource_Translater.Util
                     command.Transaction = trans;
 
                 DBCommandWrapper wrappedCommand = command;
-
                 foreach (DataRow row in dataTable.Rows)
                 {
                     addParameters(row, wrappedCommand);
 
                     // We run it Asyncroniously so that we can prepare the next Task before we run it.
                     PreviousTask.Wait();
-                    if (!token.IsCancellationRequested)
+
+                    // Check if user wants to cancel
+                    token.ThrowIfCancellationRequested();
+
+                    PreviousTask = Task.Run(() =>
                     {
-                        PreviousTask = Task.Run(() =>
-                        {
-                            DBCon.WaitForOpen();
-                            CommandExecuteElseMessage(dataTable, DBCon, command);
-                        });
-                    }
+                        DBCon.WaitForOpen();
+                        CommandExecuteElseMessage(dataTable, DBCon, command);
+
+                        Interlocked.Increment(ref i);
+                        update(i, dataTable.Rows.Count);
+                    });
                 }
             }
+
+            // Wait for the last task to be done.
             PreviousTask.Wait();
         }
 
