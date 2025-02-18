@@ -41,13 +41,13 @@ WHERE row_number <> 1;
 -- Demonstration of ChangeTranslation
 
 -- see ChangeTranslations
-SELECT t.* FROM Changedtranslation t;
+-- SELECT ct.* FROM Changedtranslation ct;
 
 -- add ChangeTranslation of subject
 -- insert INTO ChangedTranslation (ChangedText, TranslationID) SELECT t.Text + ' changed Text', t.ID from Translation t where t.SystemEnum = 1 and t."Key" = 'CannotUpdateComment' and t.LanguageCode = 'EN';
 
 -- see chosen subject in translation
--- select t.* from Translation t where t.SystemEnum = 1 and t."Key" = 'CannotUpdateComment' and t.LanguageCode = 'EN';
+select t.* from Translation t where t.SystemEnum = 1 and t."Key" = 'CannotUpdateComment' and t.LanguageCode = 'EN';
 
 -- This is what the program sees when fetching changes
 /*
@@ -59,4 +59,4 @@ WITH changedTrnaslationsLatest AS (
 )
 SELECT a."Key", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as "ChangedID"
 FROM Translation a JOIN changedTrnaslationsLatest b ON a.ID = b.TranslationID WHERE b.ReverseRowNumber = 1 and a.SystemEnum = 1;
-*/
+--*/

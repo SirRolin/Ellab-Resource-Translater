@@ -32,7 +32,6 @@ namespace Ellab_Resource_Translater.Util
     public class DatabaseTransactionHandler(CancellationTokenSource source, Action<DbConnection, DbTransaction?> onTransactionStart, string commandText, Action<DataRow, IDBparameterable> addParameters, int inserters = 4)
     {
         private readonly ConcurrentQueue<DataTable> insertToDatabaseTasks = [];
-        private readonly object lockObj = new();
         private readonly CancellationToken token = source.Token;
         private int insertsPending = 0;
         private bool _waitTillStopped = false;
@@ -45,10 +44,7 @@ namespace Ellab_Resource_Translater.Util
         public void AddInsert(DataTable dt)
         {
             Interlocked.Increment(ref insertsPending);
-            lock (lockObj)
-            {
-                insertToDatabaseTasks.Enqueue(dt);
-            }
+            insertToDatabaseTasks.Enqueue(dt);
             Interlocked.Decrement(ref insertsPending);
         }
 
@@ -133,6 +129,7 @@ namespace Ellab_Resource_Translater.Util
             // Upload to the Database
             if (DBCon.CanCreateBatch)
             {
+                /// Must not use using - This is due to trying to execute while preparing the next batch command.
                 var s = DBCon.CreateBatch();
                 if(trans != null)
                     s.Transaction = trans;
@@ -157,7 +154,7 @@ namespace Ellab_Resource_Translater.Util
                             {
                                 s.ExecuteNonQuery();
 
-                                // Manually Disposing of it instead of using, well using, cause otherwise it gets disposed off before it gets to execute.
+                                // Manually Disposing of it instead of using, well... using, cause otherwise it gets disposed off before it gets to execute.
                                 s.Dispose();
                             }
                             catch (Exception)

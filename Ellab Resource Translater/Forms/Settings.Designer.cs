@@ -41,24 +41,24 @@ namespace Ellab_Resource_Translater
             ValText = new Label();
             ValPath = new TextBox();
             ValFBButton = new Button();
-            translationPanel = new Panel();
-            translationLabel = new Label();
-            translationCheckedListBox = new CheckedListBox();
-            flowLayoutPanel1 = new FlowLayoutPanel();
+            TranslationPanel = new Panel();
+            TranslationLabel = new Label();
+            TranslationCheckedListBox = new CheckedListBox();
+            FlowLayoutPanel1 = new FlowLayoutPanel();
             panel1 = new Panel();
-            coresNumeric = new NumericUpDown();
+            CoresNumeric = new NumericUpDown();
             label1 = new Label();
             panel2 = new Panel();
-            inserterNumeric = new NumericUpDown();
+            InserterNumeric = new NumericUpDown();
             label2 = new Label();
             CloseOnSuccess = new CheckBox();
             LocationTablePanel.SuspendLayout();
-            translationPanel.SuspendLayout();
-            flowLayoutPanel1.SuspendLayout();
+            TranslationPanel.SuspendLayout();
+            FlowLayoutPanel1.SuspendLayout();
             panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)coresNumeric).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)CoresNumeric).BeginInit();
             panel2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)inserterNumeric).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)InserterNumeric).BeginInit();
             SuspendLayout();
             // 
             // ValFBDialog
@@ -155,61 +155,61 @@ namespace Ellab_Resource_Translater
             // 
             // translationPanel
             // 
-            translationPanel.AutoSize = true;
-            translationPanel.Controls.Add(translationLabel);
-            translationPanel.Controls.Add(translationCheckedListBox);
-            translationPanel.Location = new Point(15, 15);
-            translationPanel.Margin = new Padding(15, 0, 15, 0);
-            translationPanel.MinimumSize = new Size(100, 0);
-            translationPanel.Name = "translationPanel";
-            translationPanel.Size = new Size(103, 223);
-            translationPanel.TabIndex = 0;
+            TranslationPanel.AutoSize = true;
+            TranslationPanel.Controls.Add(TranslationLabel);
+            TranslationPanel.Controls.Add(TranslationCheckedListBox);
+            TranslationPanel.Location = new Point(15, 15);
+            TranslationPanel.Margin = new Padding(15, 0, 15, 0);
+            TranslationPanel.MinimumSize = new Size(100, 0);
+            TranslationPanel.Name = "translationPanel";
+            TranslationPanel.Size = new Size(103, 223);
+            TranslationPanel.TabIndex = 0;
             // 
             // translationLabel
             // 
-            translationLabel.Dock = DockStyle.Top;
-            translationLabel.Location = new Point(0, 0);
-            translationLabel.Margin = new Padding(15, 15, 15, 0);
-            translationLabel.Name = "translationLabel";
-            translationLabel.Size = new Size(103, 15);
-            translationLabel.TabIndex = 3;
-            translationLabel.Text = "Ai Translation";
-            translationLabel.TextAlign = ContentAlignment.MiddleCenter;
+            TranslationLabel.Dock = DockStyle.Top;
+            TranslationLabel.Location = new Point(0, 0);
+            TranslationLabel.Margin = new Padding(15, 15, 15, 0);
+            TranslationLabel.Name = "translationLabel";
+            TranslationLabel.Size = new Size(103, 15);
+            TranslationLabel.TabIndex = 3;
+            TranslationLabel.Text = "Ai Translation";
+            TranslationLabel.TextAlign = ContentAlignment.MiddleCenter;
             // 
             // translationCheckedListBox
             // 
-            translationCheckedListBox.CheckOnClick = true;
-            translationCheckedListBox.Cursor = Cursors.Hand;
-            translationCheckedListBox.FormattingEnabled = true;
-            translationCheckedListBox.Items.AddRange(new object[] { "DE", "ES", "FR", "IT", "JA", "KO", "NL", "PL", "PT", "TR", "ZH" });
-            translationCheckedListBox.Location = new Point(0, 18);
-            translationCheckedListBox.MultiColumn = true;
-            translationCheckedListBox.Name = "translationCheckedListBox";
-            translationCheckedListBox.RightToLeft = RightToLeft.No;
-            translationCheckedListBox.Size = new Size(100, 202);
-            translationCheckedListBox.Sorted = true;
-            translationCheckedListBox.TabIndex = 5;
-            translationCheckedListBox.ItemCheck += TranslationCheckedListBox_SelectedIndexChanged;
+            TranslationCheckedListBox.CheckOnClick = true;
+            TranslationCheckedListBox.Cursor = Cursors.Hand;
+            TranslationCheckedListBox.FormattingEnabled = true;
+            TranslationCheckedListBox.Items.AddRange(new object[] { "DE", "ES", "FR", "IT", "JA", "KO", "NL", "PL", "PT", "TR", "ZH" });
+            TranslationCheckedListBox.Location = new Point(0, 18);
+            TranslationCheckedListBox.MultiColumn = true;
+            TranslationCheckedListBox.Name = "translationCheckedListBox";
+            TranslationCheckedListBox.RightToLeft = RightToLeft.No;
+            TranslationCheckedListBox.Size = new Size(100, 202);
+            TranslationCheckedListBox.Sorted = true;
+            TranslationCheckedListBox.TabIndex = 5;
+            TranslationCheckedListBox.ItemCheck += TranslationCheckedListBox_SelectedIndexChanged;
             // 
             // flowLayoutPanel1
             // 
-            flowLayoutPanel1.Controls.Add(translationPanel);
-            flowLayoutPanel1.Controls.Add(panel1);
-            flowLayoutPanel1.Controls.Add(panel2);
-            flowLayoutPanel1.Controls.Add(CloseOnSuccess);
-            flowLayoutPanel1.Dock = DockStyle.Fill;
-            flowLayoutPanel1.FlowDirection = FlowDirection.TopDown;
-            flowLayoutPanel1.Location = new Point(0, 88);
-            flowLayoutPanel1.Margin = new Padding(0);
-            flowLayoutPanel1.Name = "flowLayoutPanel1";
-            flowLayoutPanel1.Padding = new Padding(0, 15, 0, 15);
-            flowLayoutPanel1.Size = new Size(584, 273);
-            flowLayoutPanel1.TabIndex = 5;
+            FlowLayoutPanel1.Controls.Add(TranslationPanel);
+            FlowLayoutPanel1.Controls.Add(panel1);
+            FlowLayoutPanel1.Controls.Add(panel2);
+            FlowLayoutPanel1.Controls.Add(CloseOnSuccess);
+            FlowLayoutPanel1.Dock = DockStyle.Fill;
+            FlowLayoutPanel1.FlowDirection = FlowDirection.TopDown;
+            FlowLayoutPanel1.Location = new Point(0, 88);
+            FlowLayoutPanel1.Margin = new Padding(0);
+            FlowLayoutPanel1.Name = "flowLayoutPanel1";
+            FlowLayoutPanel1.Padding = new Padding(0, 15, 0, 15);
+            FlowLayoutPanel1.Size = new Size(584, 273);
+            FlowLayoutPanel1.TabIndex = 5;
             // 
             // panel1
             // 
             panel1.AutoSize = true;
-            panel1.Controls.Add(coresNumeric);
+            panel1.Controls.Add(CoresNumeric);
             panel1.Controls.Add(label1);
             panel1.Location = new Point(148, 15);
             panel1.Margin = new Padding(15, 0, 15, 0);
@@ -217,16 +217,16 @@ namespace Ellab_Resource_Translater
             panel1.Size = new Size(178, 52);
             panel1.TabIndex = 1;
             // 
-            // coresNumeric
+            // CoresNumeric
             // 
-            coresNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            coresNumeric.Location = new Point(3, 26);
-            coresNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
-            coresNumeric.Name = "coresNumeric";
-            coresNumeric.Size = new Size(172, 23);
-            coresNumeric.TabIndex = 1;
-            coresNumeric.Value = new decimal(new int[] { 32, 0, 0, 0 });
-            coresNumeric.ValueChanged += NumericUpDown1_ValueChanged;
+            CoresNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            CoresNumeric.Location = new Point(3, 26);
+            CoresNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
+            CoresNumeric.Name = "CoresNumeric";
+            CoresNumeric.Size = new Size(172, 23);
+            CoresNumeric.TabIndex = 1;
+            CoresNumeric.Value = new decimal(new int[] { 32, 0, 0, 0 });
+            CoresNumeric.ValueChanged += NumericUpDown1_ValueChanged;
             // 
             // label1
             // 
@@ -243,7 +243,7 @@ namespace Ellab_Resource_Translater
             // panel2
             // 
             panel2.AutoSize = true;
-            panel2.Controls.Add(inserterNumeric);
+            panel2.Controls.Add(InserterNumeric);
             panel2.Controls.Add(label2);
             panel2.Location = new Point(148, 67);
             panel2.Margin = new Padding(15, 0, 15, 0);
@@ -251,15 +251,16 @@ namespace Ellab_Resource_Translater
             panel2.Size = new Size(178, 52);
             panel2.TabIndex = 3;
             // 
-            // inserterNumeric
+            // InserterNumeric
             // 
-            inserterNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            inserterNumeric.Location = new Point(3, 26);
-            inserterNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
-            inserterNumeric.Name = "inserterNumeric";
-            inserterNumeric.Size = new Size(150, 23);
-            inserterNumeric.TabIndex = 1;
-            inserterNumeric.Value = new decimal(new int[] { 4, 0, 0, 0 });
+            InserterNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            InserterNumeric.Location = new Point(3, 26);
+            InserterNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
+            InserterNumeric.Name = "InserterNumeric";
+            InserterNumeric.Size = new Size(150, 23);
+            InserterNumeric.TabIndex = 1;
+            InserterNumeric.Value = new decimal(new int[] { 4, 0, 0, 0 });
+            InserterNumeric.ValueChanged += InserterNumeric_ValueChanged;
             // 
             // label2
             // 
@@ -290,22 +291,22 @@ namespace Ellab_Resource_Translater
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(584, 361);
-            Controls.Add(flowLayoutPanel1);
+            Controls.Add(FlowLayoutPanel1);
             Controls.Add(LocationTablePanel);
             Name = "Settings";
             Text = "Settings";
             Load += Settings_Load;
             LocationTablePanel.ResumeLayout(false);
             LocationTablePanel.PerformLayout();
-            translationPanel.ResumeLayout(false);
-            flowLayoutPanel1.ResumeLayout(false);
-            flowLayoutPanel1.PerformLayout();
+            TranslationPanel.ResumeLayout(false);
+            FlowLayoutPanel1.ResumeLayout(false);
+            FlowLayoutPanel1.PerformLayout();
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)coresNumeric).EndInit();
+            ((System.ComponentModel.ISupportInitialize)CoresNumeric).EndInit();
             panel2.ResumeLayout(false);
             panel2.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)inserterNumeric).EndInit();
+            ((System.ComponentModel.ISupportInitialize)InserterNumeric).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -320,16 +321,16 @@ namespace Ellab_Resource_Translater
         private Button ValFBButton;
         private FolderBrowserDialog EMsuiteFBDialog;
         private FolderBrowserDialog ValFBDialog;
-        private Panel translationPanel;
-        private Label translationLabel;
-        private CheckedListBox translationCheckedListBox;
-        private FlowLayoutPanel flowLayoutPanel1;
+        private Panel TranslationPanel;
+        private Label TranslationLabel;
+        private CheckedListBox TranslationCheckedListBox;
+        private FlowLayoutPanel FlowLayoutPanel1;
         private Panel panel1;
-        private NumericUpDown coresNumeric;
+        private NumericUpDown CoresNumeric;
         private Label label1;
         private CheckBox CloseOnSuccess;
         private Panel panel2;
-        private NumericUpDown inserterNumeric;
+        private NumericUpDown InserterNumeric;
         private Label label2;
     }
 }

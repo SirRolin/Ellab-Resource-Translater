@@ -194,7 +194,7 @@ namespace Ellab_Resource_Translater.Translators
                 var resourcePath = string.Concat(rootPath, rootPath.EndsWith('/') ? "" : '/', transDictKey);
 
                 // Load Local data so we don't lose data that wasn't overriden
-                var translations = ReadResource<object?>(resourcePath);
+                var translations = ResourceHandler.ReadResource<object?>(resourcePath);
 
                 // Override in Memory
                 var changes = changesToRegister[transDictKey];
@@ -211,7 +211,7 @@ namespace Ellab_Resource_Translater.Translators
                 });
 
                 // Save to Local Data
-                WriteResource(resourcePath, translations);
+                ResourceHandler.WriteResource(resourcePath, translations);
             }
             ExecutionHandler.Execute(maxThreads, fileCount, (int i) =>
             {
@@ -372,152 +372,29 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private static Dictionary<string, MetaData<Type>> ReadResource<Type>(string path)
-        {
-            Dictionary<string, MetaData<Type>> trans = [];
-            using (ResXResourceReader resxReader = new(path))
-            {
-                using ResXResourceReader resxCommentReader = new(path);
-                // Switches to reading metaData instead of values, can't have both, which we need for comments
-                resxCommentReader.UseResXDataNodes = true;
-
-                // Found out that some files are simply broken which will cause this to throw an error when it reaches the end of the file.
-                try
-                {
-                    var enumerator = resxCommentReader.GetEnumerator();
-                    foreach (DictionaryEntry entry in resxReader)
-                    {
-                        string key = entry.Key.ToString() ?? string.Empty;
-                        string comment;
-
-                        // Since we have 2 readers of the same File, we can iterate over them synced by calling MoveNext only once per loop
-                        if (enumerator.MoveNext())
-                        {
-                            ResXDataNode? current = (ResXDataNode?)((DictionaryEntry)enumerator.Current).Value;
-                            comment = current?.Comment ?? string.Empty;
-                        }
-                        else 
-                            comment = string.Empty;
-
-                        if(entry.Value is Type value)
-                            trans.Add(key, new MetaData<Type>(key, value, comment));
-                    }
-                }
-                catch
-                {
-                }
-            }
-            return trans;
-        }
-
-        private static void WriteResource(string path, Dictionary<string, MetaData<object?>> trans)
-        {
-            using ResXResourceWriter resxWriter = new(path);
-            foreach (var entry in trans)
-            {
-                resxWriter.AddResource(entry.Value);
-            }
-        }
-
-        private void TranslateMissingValues(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang)
-        {
-            // Find missing translation keys
-            List<MetaData<object?>> emptyTranslations = [.. translations[lang].Values.Where(x => x.value is string str && str == string.Empty)];
-
-            // Nothing to translate? return
-            if (emptyTranslations.Count == 0 || TranslationService != null)
-                return;
-
-            // Get missing translation values in english as a Reverse Dictionary
-            // Filter so we don't get errors
-            // GroupBy so that dublicate values doesn't break as it becomes a key
-            // Another Filter to remove the once that doesn't have a text in english (can't translate empty string)
-            Dictionary<string, MetaData<string>[]> kvp = emptyTranslations
-                .Where(x => x.value is string).Select(x => new MetaData<string>(x.key, x.value?.ToString() ?? string.Empty, x.comment))
-                .Where(x => translations["EN"].ContainsKey(x.key))
-                .GroupBy(keySelector: x => translations["EN"][x.key].value as string ?? string.Empty, x => x)
-                .Where(k => !k.Key.Equals(string.Empty))
-                .ToDictionary(g => g.Key, g => g.ToArray());
-
-
-            string[] textsToTranslate = [.. kvp.Keys];
-            if (textsToTranslate.Length > 0 && TranslationService != null)
-            {
-                var response = TranslationService.TranslateTextAsync(textsToTranslate, lang).Result;
-                foreach (var (source, translation) in response)
-                {
-                    var itemST = source;
-                    var transes = kvp[itemST];
-                    foreach (MetaData<string> transItem in transes)
-                    {
-                        string? text = translation[0];
-                        if (text != null)
-                        {
-                            transItem.value = text;
-                            transItem.comment = String.Join("\n", transItem.comment, "Ai Translated.");
-                        }
-                        else if(translations["EN"][itemST].value is string englishValue) // Shouldn't ever be false, but if it is, we avoid the error.
-                        {
-                            transItem.value = englishValue;
-                            transItem.comment = String.Join("\n", transItem.comment, "Attempted Ai Translation Failed.");
-                        }
-                    }
-                };
-            }
-        }
 
         private void TranslateResource(HashSet<string> existing, string resource, int pathLength)
         {
-            // To store the Data in each language.
-            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = [];
-
-            // Retrieve the English information
-            translations.Add("EN", ReadResource<object?>(resource));
-
-            // Translations work
             var langs = config.languagesToTranslate.ToArray();
-            foreach (var lang in langs)
-            {
-                bool aiTrans = config.languagesToAiTranslate.Contains(lang);
-                string langPath = Path.ChangeExtension(resource, $".{lang.ToLower()}.resx");
-                // Setup the Translations
-                if (!existing.Contains(langPath))
-                    translations.Add(lang, []);
-                else
-                    translations.Add(lang, ReadResource<object?>(langPath));
+            var langsToAi = langs.Intersect(config.languagesToAiTranslate);
+            var translations = ResourceHandler.GetAllLangResources(existing: existing,
+                                                                   resource: resource,
+                                                                   langs: langs,
+                                                                   langsToAi: langsToAi,
+                                                                   translationService: TranslationService);
 
-                // Add all missing translations
-                foreach (string entry in translations["EN"].Keys)
-                {
-                    if (!translations[lang].TryGetValue(entry, out MetaData<object?>? trans) || (trans.value is string strVal && string.IsNullOrEmpty(strVal)))
-                    {
-                        var value = aiTrans ? string.Empty : translations["EN"][entry].value;
-                        var comment = translations["EN"][entry].comment;
-
-                        // In Case of only the value is empty
-                        translations[lang].Remove(entry);
-
-                        // Add it to the Languages Dictionary
-                        trans = new MetaData<object?>(entry, value, comment);
-                        translations[lang].Add(entry, trans);
-                    }
-                }
-
-                // AI Translation
-                if (aiTrans)
-                    TranslateMissingValues(translations, lang);
-            }
 
             // Save Translations
             foreach (var item in translations)
             {
                 if (!item.Key.Equals("EN"))
-                    WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
+                    ResourceHandler.WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
             }
 
             // Try to write to the Database
             WriteToDatabase(pathLength, resource, translations);
         }
+
 
         private void WriteToDatabase(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<object?>>> translations)
         {

@@ -59,7 +59,7 @@ namespace Ellab_Resource_Translater
 
             FormUtils.SaveCheckBoxListLocalised(
                 list: config.languagesToAiTranslate,
-                checkedListBox: translationCheckedListBox,
+                checkedListBox: TranslationCheckedListBox,
                 localiser: languagePairs);
         }
 
@@ -71,14 +71,14 @@ namespace Ellab_Resource_Translater
             setup++;
             FormUtils.LoadCheckboxListLocalised(
                 list: config.languagesToAiTranslate,
-                checkedListBox: translationCheckedListBox,
+                checkedListBox: TranslationCheckedListBox,
                 localiser: languagePairs
                 );
 
             EMsuitePath.Text = config.EMPath;
             ValPath.Text = config.ValPath;
-            coresNumeric.Value = config.threadsToUse;
-            inserterNumeric.Value = config.insertersToUse;
+            CoresNumeric.Value = config.threadsToUse;
+            InserterNumeric.Value = config.insertersToUse;
             CloseOnSuccess.Checked = config.closeOnceDone;
             Config.AssignSizeSetting(this, (s) => config.SettingWindowSize = s, this.Size);
             setup--;
@@ -113,7 +113,7 @@ namespace Ellab_Resource_Translater
             if (setup > 0)
                 return;
 
-            Config.Get().threadsToUse = (int)coresNumeric.Value;
+            Config.Get().threadsToUse = (int)CoresNumeric.Value;
         }
 
         private void CloseOnSuccess_CheckedChanged(object sender, EventArgs e)
@@ -123,6 +123,15 @@ namespace Ellab_Resource_Translater
                 return;
 
             Config.Get().closeOnceDone = CloseOnSuccess.Checked;
+        }
+
+        private void InserterNumeric_ValueChanged(object sender, EventArgs e)
+        {
+            // While Loading I don't want this to run
+            if (setup > 0)
+                return;
+
+            Config.Get().insertersToUse = (int)InserterNumeric.Value;
         }
     }
 }
