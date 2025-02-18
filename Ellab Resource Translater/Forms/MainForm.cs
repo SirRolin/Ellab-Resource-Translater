@@ -19,19 +19,15 @@ namespace Ellab_Resource_Translater
         internal const string AZURE_SECRET = "EllabResourceTranslator:azure";
         private CancellationTokenSource? cancelTSource;
 
-        private string connectionStringState = "";
-        private readonly Task connectionStringUpdater;
 
         public MainForm()
         {
             InitializeComponent();
-            connectionStringUpdater = new Task(() => {
-                while (!IsDisposed)
-                {
-                    connectionStatus.Invoke(() => connectionStatus.Text = string.Concat("DB ", connectionStringState));
-                    Task.Delay(500).Wait();
-                }
-            });
+        }
+
+        private void updateConnectionStatus(string connectionStringState)
+        {
+            connectionStatus.Invoke(() => connectionStatus.Text = string.Concat("DB ", connectionStringState));
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -51,8 +47,6 @@ namespace Ellab_Resource_Translater
             TryConnectAzure();
             Config.AssignSizeSetting(this, (s) => config.MainWindowSize = s, config.MainWindowSize);
             setup--;
-
-            connectionStringUpdater.Start();
         }
 
         public Task TryConnectDB()
@@ -74,27 +68,28 @@ namespace Ellab_Resource_Translater
                 if (connString != null)
                 {
                     connProv = new(connString);
-                    connectionStringState = "Test...";
+                    updateConnectionStatus("Test...");
+                    
                     try
                     {
                         using DbConnection conn = connProv.Get();
                         await conn.OpenAsync();
                         if (conn.State == System.Data.ConnectionState.Open)
                         {
-                            connectionStringState = "Can Connect";
+                            updateConnectionStatus("Can Connect");
                         }
                         await conn.CloseAsync();
                     }
                     catch (Exception ex)
                     {
-                        connectionStringState = ex.Message;
+                        updateConnectionStatus(ex.Message);
                         return;
                     }
                     return;
                 }
                 else
                 {
-                    connectionStringState = "Need Setup:";
+                    updateConnectionStatus("Need Setup:");
                 }
 
                 // Reenabling the refresh

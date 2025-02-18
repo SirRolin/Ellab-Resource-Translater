@@ -37,7 +37,7 @@ namespace Ellab_Resource_Translater.Util
         public List<string> languagesToTranslate = [];
         public List<string> languagesToAiTranslate = [];
         public int threadsToUse = 32;
-        public int insertersToUse = 8;
+        public int insertersToUse = 4;
         public Size MainWindowSize = new(900, 650);
         public Size SettingWindowSize = new(600, 400);
         public bool closeOnceDone = false;
