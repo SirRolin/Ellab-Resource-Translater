@@ -65,17 +65,17 @@ namespace Ellab_Resource_Translater.Util
             update.Invoke();
         }
 
-        public static TResult ShowOnListWhileProcessing<TResult>(int pathLength, Action update, ListView listView, string resourceName, Func<TResult> process)
+        public static TResult ShowOnListWhileProcessing<TResult>(int pathLength, Action update, ListView listView, string resourceName, Func<ListViewItem, TResult> process)
         {
             return ShowOnListWhileProcessing((s) => s[(pathLength+1)..], update, listView, resourceName, process);
         }
 
-        public static TResult ShowOnListWhileProcessing<TResult>(Func<string, string> getResource, Action update, ListView listView, string resourceName, Func<TResult> process)
+        public static TResult ShowOnListWhileProcessing<TResult>(Func<string, string> getResource, Action update, ListView listView, string resourceName, Func<ListViewItem, TResult> process)
         {
             string shortenedPath = getResource(resourceName);
             ListViewItem listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
 
-            var output = process();
+            var output = process(listViewItem);
 
             listView.Invoke(() => listView.Items.Remove(listViewItem));
             update.Invoke();
