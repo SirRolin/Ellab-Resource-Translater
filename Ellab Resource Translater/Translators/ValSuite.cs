@@ -10,12 +10,16 @@ namespace Ellab_Resource_Translater.Translators
 {
     internal class ValSuite(TranslationService? translationService, ConnectionProvider? DBCon, CancellationTokenSource source) : DBProcessorBase(translationService, DBCon, source, 0, Config.Get().threadsToUse)
     {
+        internal string[] folders = ["dottxt20", "Popup20", "ReportTxtStr"];
         internal void Run(string path, ListView view, Label progresText)
         {
+            string folderStr = String.Join('|', folders);
+
             Run(path,
                 view,
                 progresText,
-                new(@".*(?<!\..{0,5})\.resx"));
+                // \\(dottxt20|popup20|ReportTxtstr)\\ means that it has to be in a folder that's either dottxt20, popup20 or ReportTxtstr.
+                new($@".*\\({folderStr})\\.*(?<!\..{{0,5}})\.resx"));
         }
     }
 }
