@@ -63,7 +63,7 @@ namespace Ellab_Resource_Translater.Util
             using ResXResourceWriter resxWriter = new(path);
             foreach (var entry in data)
             {
-                resxWriter.AddResource(entry.Value);
+                entry.Value.WriteToResourceWriter(resxWriter);
             }
         }
         /// <summary>

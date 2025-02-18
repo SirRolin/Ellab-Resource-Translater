@@ -1,10 +1,10 @@
 ﻿
 --  See EMSuite entries
---SELECT a.* from Translation a where a.SystemEnum = 1;
+-- SELECT a.* from Translation a where a.SystemEnum = 1;
 
 
 -- See Valsuite entries 
--- select a.* from Translation a where a.SystemEnum = 0;
+select a.* from Translation a where a.SystemEnum = 0 and a.LanguageCode = 'EN';
 
 
 -- DELETE a FROm Translation a where (a."Key" LIKE '%.Font') or ISNUMERIC(a.Text) = 1;
@@ -47,7 +47,7 @@ WHERE row_number <> 1;
 -- insert INTO ChangedTranslation (ChangedText, TranslationID) SELECT t.Text + ' changed Text', t.ID from Translation t where t.SystemEnum = 1 and t."Key" = 'CannotUpdateComment' and t.LanguageCode = 'EN';
 
 -- see chosen subject in translation
-select t.* from Translation t where t.SystemEnum = 1 and t."Key" = 'CannotUpdateComment' and t.LanguageCode = 'EN';
+-- select t.* from Translation t where t.SystemEnum = 1 and t."Key" = 'CannotUpdateComment' and t.LanguageCode = 'EN';
 
 -- This is what the program sees when fetching changes
 /*
