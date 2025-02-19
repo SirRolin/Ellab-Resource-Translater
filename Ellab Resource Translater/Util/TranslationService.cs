@@ -6,7 +6,6 @@ using static Org.BouncyCastle.Math.EC.ECCurve;
 
 namespace Ellab_Resource_Translater.Util
 {
-
     public class TranslationService(AzureKeyCredential creds, Uri uri, string region)
     {
         private readonly TextTranslationClient _client = new(creds, uri, region);

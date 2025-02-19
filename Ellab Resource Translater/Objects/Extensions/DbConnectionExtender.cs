@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
 
-namespace Ellab_Resource_Translater.Objects
+namespace Ellab_Resource_Translater.Objects.Extensions
 {
     internal static class DbConnectionExtender
     {
@@ -30,7 +30,7 @@ namespace Ellab_Resource_Translater.Objects
                 return;
 
             // In case we can have multiple Result Sets
-            if (CanMultiResult(conn))
+            if (conn.CanMultiResult())
             {
                 query.Invoke(conn);
                 return;
@@ -51,7 +51,7 @@ namespace Ellab_Resource_Translater.Objects
 
         public static void WaitForOpen(this DbConnection conn)
         {
-            WaitForOpen(conn, () => { });
+            conn.WaitForOpen(() => { });
         }
         public static void WaitForOpen(this DbConnection conn, Action ConnectionBroke)
         {

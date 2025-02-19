@@ -1,4 +1,5 @@
-﻿using Ellab_Resource_Translater.Util;
+﻿using Ellab_Resource_Translater.Objects.Extensions;
+using Ellab_Resource_Translater.Util;
 using Microsoft.Data.SqlClient;
 using MySql.Data.MySqlClient;
 using System;

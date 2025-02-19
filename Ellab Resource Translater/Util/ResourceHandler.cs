@@ -4,7 +4,7 @@ using System.Resources;
 
 namespace Ellab_Resource_Translater.Util
 {
-    public class ResourceHandler
+    public static class ResourceHandler
     {
         /// <summary>
         /// Reads the resource file (.resx) and returns a dictionary of the entries with the key as the dictionary key.
