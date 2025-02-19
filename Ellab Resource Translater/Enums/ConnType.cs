@@ -17,16 +17,4 @@ namespace Ellab_Resource_Translater.Enums
         MySqlIS = MySql | IS,
         MSSqlIS = MSSql | IS
     }
-
-    public static class ConnTypeExtender
-    {
-        public static bool HasAny(this ConnType tct, ConnType ct)
-        {
-            return (ct & tct) != 0;
-        }
-        public static bool HasAll(this ConnType tct, ConnType ct)
-        {
-            return (ct & tct) == tct;
-        }
-    }
 }

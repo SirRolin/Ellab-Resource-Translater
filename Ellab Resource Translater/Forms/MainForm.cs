@@ -230,7 +230,7 @@ namespace Ellab_Resource_Translater
             AbleControls(true);
         }
 
-        private void ValSuite_Init(TranslationService? transServ, CancellationTokenSource source)
+        public void ValSuite_Init(TranslationService? transServ, CancellationTokenSource source)
         {
             progressTitle.Invoke(() => progressTitle.Text = "Val Suite");
             var config = Config.Get();
@@ -299,7 +299,7 @@ namespace Ellab_Resource_Translater
             CancellationButton.Enabled = !enable;
         }
 
-        private void EMSuite_Init(TranslationService? transServ, CancellationTokenSource source)
+        public void EMSuite_Init(TranslationService? transServ, CancellationTokenSource source)
         {
             progressTitle.Invoke(() => progressTitle.Text = "EM Suite");
             var config = Config.Get();

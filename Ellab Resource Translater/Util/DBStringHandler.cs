@@ -14,7 +14,7 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Ellab_Resource_Translater.Util
 {
-    internal class DBStringHandler
+    public class DBStringHandler
     {
         /// <summary>
         /// Tries to detect which database it is and return a relevant DBConnection.

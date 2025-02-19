@@ -8,7 +8,7 @@ using System.Windows.Forms;
 
 namespace Ellab_Resource_Translater.Util
 {
-    internal class ExecutionHandler
+    public class ExecutionHandler
     {
         /// <summary>
         /// Execute <paramref name="action"/> on <paramref name="threads"/> threads. If <paramref name="threads"/> is not positive, Execute <paramref name="action"/> on current Thread.

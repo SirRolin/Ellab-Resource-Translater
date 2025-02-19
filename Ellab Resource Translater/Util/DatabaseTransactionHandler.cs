@@ -1,6 +1,7 @@
 ﻿using Ellab_Resource_Translater.Enums;
 using Ellab_Resource_Translater.Interfaces;
 using Ellab_Resource_Translater.Objects;
+using Ellab_Resource_Translater.Objects.Extensions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Azure;
 using Mysqlx.Crud;
@@ -133,7 +134,7 @@ namespace Ellab_Resource_Translater.Util
         /// Only does something if <see cref="StartCommands(ConnectionProvider, Label, ListView, Func{DataTable, string}, bool)"/> was called with <see langword="true"/> for <see langword="waitTillStopped"/><br/>
         /// when no more <see cref="DataTable"/>s are available to insert.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Previous State of waiting</returns>
         public bool NoMoreInserts()
         {
             bool output = _waitTillStopped;

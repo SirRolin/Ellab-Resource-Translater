@@ -34,25 +34,4 @@ namespace Ellab_Resource_Translater.Objects
             return output;
         }
     }
-
-    public static class MetaDataHelper
-    {
-        public static ResXDataNode? ToResXDataNode(this MetaData<object?> meta) {
-            if(meta.value is ISerializable iSer)
-                return new (meta.key, iSer) { 
-                    Comment = meta.comment
-                };
-            return null;
-        }
-
-        public static void WriteToResourceWriter(this MetaData<object?> meta, ResXResourceWriter writer)
-        {
-            if (meta.value is ISerializable iSer)
-                writer.AddResource(new(meta.key, iSer)
-                {
-                    Comment = meta.comment
-                });
-        }
-
-    }
 }

@@ -20,7 +20,7 @@ namespace Ellab_Resource_Translater.Translators
 
         public DatabaseTransactionHandler? dth;
 
-        internal void Run(string path, ListView view, Label progresText, Regex regex)
+        public void Run(string path, ListView view, Label progresText, Regex regex)
         {
             /// Local Functions to make the data transaction handler call more readable.
             Action<DbConnection, DbTransaction?> onTransactionStart(int systemEnum, Label progresText)

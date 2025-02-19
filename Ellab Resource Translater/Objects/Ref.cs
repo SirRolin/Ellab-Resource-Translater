@@ -15,7 +15,7 @@ namespace Ellab_Resource_Translater.Objects
     internal class Ref<T>(T value)
     {
         public T value = value;
-        public static implicit operator T(Ref<T> intRef) => intRef.value;
+        public static implicit operator T(Ref<T> valRef) => valRef.value;
         public static implicit operator Ref<T>(T val) => new(val);
     }
 }
