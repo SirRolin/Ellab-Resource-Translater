@@ -1,4 +1,5 @@
 ﻿using Ellab_Resource_Translater.Objects;
+using Ellab_Resource_Translater.Objects.Extensions;
 using System.Collections;
 using System.Resources;
 
