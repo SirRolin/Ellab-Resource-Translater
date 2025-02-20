@@ -46,8 +46,8 @@ namespace Ellab_Resource_Translater.Util
         private static Config? instance;
         private Config()
         {
-            this.languagesToTranslate = defaultLanguages.Select(x => x.Key).ToList();
-            this.languagesToAiTranslate = defaultLanguages.Select(x => x.Key).ToList();
+            this.languagesToTranslate = [.. defaultLanguages.Select(x => x.Key)];
+            this.languagesToAiTranslate = [.. defaultLanguages.Select(x => x.Key)];
             this.languagesToAiTranslate.RemoveAll(x => languagesNotToAi.Contains(x));
         }
         [JsonConstructor]
@@ -63,7 +63,6 @@ namespace Ellab_Resource_Translater.Util
             this.SettingWindowSize = SettingWindowSize ?? new(600, 400);
             this.closeOnceDone = closeOnceDone;
         }
-
 
         public static Config Get()
         {
@@ -83,6 +82,11 @@ namespace Ellab_Resource_Translater.Util
             instance ??= new Config();
 
             return instance;
+        }
+
+        public static bool ExistsOnDisk()
+        {
+            return File.Exists(path);
         }
 
         public static bool Save()

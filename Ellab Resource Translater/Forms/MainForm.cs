@@ -10,7 +10,6 @@ namespace Ellab_Resource_Translater
 {
     public partial class MainForm : Form
     {
-        private Settings? activeSetting;
         private int setup = 0;
         private bool batching = false;
         private ConnectionProvider? connProv;
@@ -32,6 +31,20 @@ namespace Ellab_Resource_Translater
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            if (!Config.ExistsOnDisk())
+            {
+                var answer = MessageBox.Show("It seems to be your first time running this program.\nDo you want to run the setup?",
+                                             "First Time Setup.",
+                                             MessageBoxButtons.YesNo);
+                if (answer.Equals(DialogResult.Yes))
+                {
+                    OpenSettings();
+                    OpenDBSetup();
+                    OpenAzureSetup();
+                }
+            }
+
+
             var config = Config.Get();
             var languagePairs = Config.DefaultLanguages();
             var checkitems = config.languagesToTranslate;
@@ -170,16 +183,13 @@ namespace Ellab_Resource_Translater
 
         private void SettingsButton_Click(object sender, EventArgs e)
         {
-            if (activeSetting == null || activeSetting.IsDisposed)
-            {
-                activeSetting = new Settings();
-                activeSetting.FormClosed += (s, e) => activeSetting = null;
-                activeSetting.ShowDialog();
-            }
-            else
-            {
-                activeSetting.BringToFront();
-            }
+            OpenSettings();
+        }
+
+        private static void OpenSettings()
+        {
+            var setting = new Settings();
+            setting.ShowDialog();
         }
 
         private void TranslationCheckedListBox_CheckChanged(object sender, EventArgs e)
@@ -354,6 +364,11 @@ namespace Ellab_Resource_Translater
         }
 
         private void DBConnectionSetup_Click(object sender, EventArgs e)
+        {
+            OpenDBSetup();
+        }
+
+        private void OpenDBSetup()
         {
             DatabaseSelecterForm form = new(this);
             form.ShowDialog();
