@@ -33,7 +33,6 @@ class Util.ConnectionProvider {
 	+void Dispose()
 }
 
-DbConnection -o "*" ConnectionProvider
 class DbConnection <<InBuilt>>
 
 class Translators.EMSuite {
@@ -142,6 +141,8 @@ class Objects.Extensions.MetaDataExt {
 
 namespace Translators #CCCCFF {
 	'inbound
+	.Forms.MainForm --> ValSuite : click
+	.Forms.MainForm --> EMSuite : click
 
 	'internal
 	ValSuite --|> DBProcessorBase
@@ -149,8 +150,6 @@ namespace Translators #CCCCFF {
 
 	'outbound
 	.Objects.Ref <--- DBProcessorBase
-	.Forms.MainForm --> ValSuite
-	.Forms.MainForm --> EMSuite
 	DBProcessorBase o--- .Util.DatabaseTransactionHandler
 }
 
@@ -173,6 +172,7 @@ namespace Util #CCCCFF {
 	ResourceHandler ---> Objects.MetaData
 	DBStringHandler -> Enums.ConnType
 	DatabaseTransactionHandler --up-> Objects.Extensions.DbConnectionExtender
+	.DbConnection -o "*" ConnectionProvider
 }
 namespace Objects #CCCCFF {
 	namespace Extensions #EEEEAA {
