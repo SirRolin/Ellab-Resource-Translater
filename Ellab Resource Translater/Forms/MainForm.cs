@@ -22,6 +22,7 @@ namespace Ellab_Resource_Translater
         public MainForm()
         {
             InitializeComponent();
+            TooltipNormal.SetToolTip(translationLabel, "Which languages to transfer the english versions to");
         }
 
         private void UpdateConnectionStatus(string connectionStringState)
@@ -33,7 +34,7 @@ namespace Ellab_Resource_Translater
         {
             if (!Config.ExistsOnDisk())
             {
-                var answer = MessageBox.Show("It seems to be your first time running this program.\nDo you want to run the setup?",
+                var answer = MessageBox.Show(this, "It seems to be your first time running this program.\nDo you want to run the setup?",
                                              "First Time Setup.",
                                              MessageBoxButtons.YesNo);
                 if (answer.Equals(DialogResult.Yes))
@@ -75,7 +76,7 @@ namespace Ellab_Resource_Translater
                 string? connString = SecretManager.GetUserSecret(CONNECTION_SECRET);
 
                 // Debugging
-                //RefreshConnectionButton.Invoke(() => MessageBox.Show(dbConn.Replace(";", ";\n")));
+                //RefreshConnectionButton.Invoke(() => MessageBox.Show(this, dbConn.Replace(";", ";\n")));
 
 
                 if (connString != null)
@@ -151,7 +152,11 @@ namespace Ellab_Resource_Translater
                     try
                     {
                         AzureKeyCredential credentials = new(azureCreds.Key);
-                        translationService = new(creds: credentials, uri: new Uri(azureCreds.URI), region: azureCreds.Region);
+                        translationService = new(creds: credentials, uri: new Uri(azureCreds.URI), region: azureCreds.Region)
+                        {
+                            msWaitTime = Config.Get().checkDelay
+                        };
+
                         AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = "Azure Connected");
                     }
                     catch (Exception ex)
@@ -189,6 +194,7 @@ namespace Ellab_Resource_Translater
         private static void OpenSettings()
         {
             var setting = new Settings();
+            setting.BringToFront();
             setting.ShowDialog();
         }
 
@@ -233,7 +239,7 @@ namespace Ellab_Resource_Translater
             }
             else
             {
-                MessageBox.Show(@"Azure not connected, you can either:
+                MessageBox.Show(this, @"Azure not connected, you can either:
     1) Setup Azure in the Azure button at the buttom.
     2) Disable AI Translation for all groups in Settings");
             }
@@ -255,13 +261,33 @@ namespace Ellab_Resource_Translater
 
             } else if (batching == true)
             {
-                DialogResult shouldWeContinue = MessageBox.Show("Check ValSuite path in Settings.\nShould we continue with the rest?", "Val suite Path Missing!", MessageBoxButtons.YesNo);
+                DialogResult shouldWeContinue = GetBlockingInput("Check ValSuite path in Settings.\nShould we continue with the rest?", "Val suite Path Missing!", MessageBoxButtons.YesNo);
                 if (shouldWeContinue != DialogResult.Yes) source.Cancel();
             }
             else
             {
-                MessageBox.Show("Check ValSuite path in Settings", "Val suite path Missing", MessageBoxButtons.OK);
+                ShowBlockingOkMessage("Check ValSuite path in Settings", "Val suite path Missing");
             }
+        }
+
+        private DialogResult ShowBlockingOkMessage(string text, string title)
+        {
+            return this.Invoke(() => {
+                Enabled = false;
+                var output = MessageBox.Show(this, text, title, MessageBoxButtons.OK);
+                Enabled = true;
+                return output;
+            });            
+        }
+
+        private DialogResult GetBlockingInput(string text, string title, MessageBoxButtons but)
+        {
+            return this.Invoke(() => {
+                Enabled = false;
+                var output = MessageBox.Show(this, text, title, but);
+                Enabled = true;
+                return output;
+            });
         }
 
         private async void EMSuite_Initiation(object sender, EventArgs e)
@@ -323,12 +349,12 @@ namespace Ellab_Resource_Translater
                 catch (OperationCanceledException){}
             } else if (batching == true)
             {
-                DialogResult shouldWeContinue = MessageBox.Show("Check EMSuite path in Settings.\nShould we continue with the rest?", "EM suite Path Missing!", MessageBoxButtons.YesNo);
+                DialogResult shouldWeContinue = GetBlockingInput("Check EMSuite path in Settings.\nShould we continue with the rest?", "EM suite Path Missing!", MessageBoxButtons.YesNo);
                 if (shouldWeContinue != DialogResult.Yes) source.Cancel();
             }
             else
             {
-                MessageBox.Show("Check EMSuite path in Settings", "EM suite path Missing", MessageBoxButtons.OK);
+                ShowBlockingOkMessage("Check EMSuite path in Settings", "EM suite path Missing");
             }
         }
 
@@ -353,9 +379,9 @@ namespace Ellab_Resource_Translater
             }
             else
             {
-                MessageBox.Show(@"Azure not connected, you can either:
+                ShowBlockingOkMessage(@"Azure not connected, you can either:
     1) Setup Azure in the Azure button at the buttom.
-    2) Disable AI Translation for all groups in Settings");
+    2) Disable AI Translation for all groups in Settings", "No Azure");
             }
             progressTitle.Invoke(() => progressTitle.Text = "Done");
             batching = false;
@@ -370,8 +396,9 @@ namespace Ellab_Resource_Translater
 
         private void OpenDBSetup()
         {
-            DatabaseSelecterForm form = new(this);
-            form.ShowDialog();
+            DatabaseSelecterForm DBSform = new(this);
+            DBSform.BringToFront();
+            DBSform.ShowDialog();
         }
 
         private void AzureSettingsSetup_Click(object sender, EventArgs e)
@@ -382,6 +409,7 @@ namespace Ellab_Resource_Translater
         private void OpenAzureSetup()
         {
             AzureForm azureform = new(this);
+            azureform.BringToFront();
             azureform.ShowDialog();
         }
 

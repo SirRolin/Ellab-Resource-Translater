@@ -32,6 +32,7 @@ namespace Ellab_Resource_Translater
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             EMsuiteFBDialog = new FolderBrowserDialog();
             ValFBDialog = new FolderBrowserDialog();
             LocationTablePanel = new TableLayoutPanel();
@@ -45,20 +46,26 @@ namespace Ellab_Resource_Translater
             TranslationLabel = new Label();
             TranslationCheckedListBox = new CheckedListBox();
             FlowLayoutPanel1 = new FlowLayoutPanel();
-            panel1 = new Panel();
-            CoresNumeric = new NumericUpDown();
-            label1 = new Label();
-            panel2 = new Panel();
+            ReaderPanel = new Panel();
+            ReaderNumeric = new NumericUpDown();
+            ReaderLabel = new Label();
+            InserterPanel = new Panel();
             InserterNumeric = new NumericUpDown();
-            label2 = new Label();
+            InserterLabel = new Label();
+            DelayPanel = new Panel();
+            DelayNumeric = new NumericUpDown();
+            DelayLabel = new Label();
             CloseOnSuccess = new CheckBox();
+            TooltipNormal = new ToolTip(components);
             LocationTablePanel.SuspendLayout();
             TranslationPanel.SuspendLayout();
             FlowLayoutPanel1.SuspendLayout();
-            panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)CoresNumeric).BeginInit();
-            panel2.SuspendLayout();
+            ReaderPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)ReaderNumeric).BeginInit();
+            InserterPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)InserterNumeric).BeginInit();
+            DelayPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)DelayNumeric).BeginInit();
             SuspendLayout();
             // 
             // ValFBDialog
@@ -153,7 +160,7 @@ namespace Ellab_Resource_Translater
             ValFBButton.UseVisualStyleBackColor = true;
             ValFBButton.Click += NotEmBrowse_Click;
             // 
-            // translationPanel
+            // TranslationPanel
             // 
             TranslationPanel.AutoSize = true;
             TranslationPanel.Controls.Add(TranslationLabel);
@@ -161,22 +168,22 @@ namespace Ellab_Resource_Translater
             TranslationPanel.Location = new Point(15, 15);
             TranslationPanel.Margin = new Padding(15, 0, 15, 0);
             TranslationPanel.MinimumSize = new Size(100, 0);
-            TranslationPanel.Name = "translationPanel";
+            TranslationPanel.Name = "TranslationPanel";
             TranslationPanel.Size = new Size(103, 223);
             TranslationPanel.TabIndex = 0;
             // 
-            // translationLabel
+            // TranslationLabel
             // 
             TranslationLabel.Dock = DockStyle.Top;
             TranslationLabel.Location = new Point(0, 0);
             TranslationLabel.Margin = new Padding(15, 15, 15, 0);
-            TranslationLabel.Name = "translationLabel";
+            TranslationLabel.Name = "TranslationLabel";
             TranslationLabel.Size = new Size(103, 15);
             TranslationLabel.TabIndex = 3;
             TranslationLabel.Text = "Ai Translation";
             TranslationLabel.TextAlign = ContentAlignment.MiddleCenter;
             // 
-            // translationCheckedListBox
+            // TranslationCheckedListBox
             // 
             TranslationCheckedListBox.CheckOnClick = true;
             TranslationCheckedListBox.Cursor = Cursors.Hand;
@@ -184,72 +191,72 @@ namespace Ellab_Resource_Translater
             TranslationCheckedListBox.Items.AddRange(new object[] { "DE", "ES", "FR", "IT", "JA", "KO", "NL", "PL", "PT", "TR", "ZH" });
             TranslationCheckedListBox.Location = new Point(0, 18);
             TranslationCheckedListBox.MultiColumn = true;
-            TranslationCheckedListBox.Name = "translationCheckedListBox";
+            TranslationCheckedListBox.Name = "TranslationCheckedListBox";
             TranslationCheckedListBox.RightToLeft = RightToLeft.No;
             TranslationCheckedListBox.Size = new Size(100, 202);
             TranslationCheckedListBox.Sorted = true;
             TranslationCheckedListBox.TabIndex = 5;
             TranslationCheckedListBox.ItemCheck += TranslationCheckedListBox_SelectedIndexChanged;
             // 
-            // flowLayoutPanel1
+            // FlowLayoutPanel1
             // 
             FlowLayoutPanel1.Controls.Add(TranslationPanel);
-            FlowLayoutPanel1.Controls.Add(panel1);
-            FlowLayoutPanel1.Controls.Add(panel2);
+            FlowLayoutPanel1.Controls.Add(ReaderPanel);
+            FlowLayoutPanel1.Controls.Add(InserterPanel);
+            FlowLayoutPanel1.Controls.Add(DelayPanel);
             FlowLayoutPanel1.Controls.Add(CloseOnSuccess);
             FlowLayoutPanel1.Dock = DockStyle.Fill;
             FlowLayoutPanel1.FlowDirection = FlowDirection.TopDown;
             FlowLayoutPanel1.Location = new Point(0, 88);
             FlowLayoutPanel1.Margin = new Padding(0);
-            FlowLayoutPanel1.Name = "flowLayoutPanel1";
+            FlowLayoutPanel1.Name = "FlowLayoutPanel1";
             FlowLayoutPanel1.Padding = new Padding(0, 15, 0, 15);
             FlowLayoutPanel1.Size = new Size(584, 273);
             FlowLayoutPanel1.TabIndex = 5;
             // 
-            // panel1
+            // ReaderPanel
             // 
-            panel1.AutoSize = true;
-            panel1.Controls.Add(CoresNumeric);
-            panel1.Controls.Add(label1);
-            panel1.Location = new Point(148, 15);
-            panel1.Margin = new Padding(15, 0, 15, 0);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(178, 52);
-            panel1.TabIndex = 1;
+            ReaderPanel.AutoSize = true;
+            ReaderPanel.Controls.Add(ReaderNumeric);
+            ReaderPanel.Controls.Add(ReaderLabel);
+            ReaderPanel.Location = new Point(148, 15);
+            ReaderPanel.Margin = new Padding(15, 0, 15, 0);
+            ReaderPanel.Name = "ReaderPanel";
+            ReaderPanel.Size = new Size(178, 52);
+            ReaderPanel.TabIndex = 1;
             // 
-            // CoresNumeric
+            // ReaderNumeric
             // 
-            CoresNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            CoresNumeric.Location = new Point(3, 26);
-            CoresNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
-            CoresNumeric.Name = "CoresNumeric";
-            CoresNumeric.Size = new Size(172, 23);
-            CoresNumeric.TabIndex = 1;
-            CoresNumeric.Value = new decimal(new int[] { 32, 0, 0, 0 });
-            CoresNumeric.ValueChanged += NumericUpDown1_ValueChanged;
+            ReaderNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            ReaderNumeric.Location = new Point(3, 26);
+            ReaderNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
+            ReaderNumeric.Name = "ReaderNumeric";
+            ReaderNumeric.Size = new Size(172, 23);
+            ReaderNumeric.TabIndex = 1;
+            ReaderNumeric.Value = new decimal(new int[] { 32, 0, 0, 0 });
+            ReaderNumeric.ValueChanged += NumericUpDown1_ValueChanged;
             // 
-            // label1
+            // ReaderLabel
             // 
-            label1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            label1.AutoSize = true;
-            label1.Location = new Point(3, 3);
-            label1.Margin = new Padding(3);
-            label1.Name = "label1";
-            label1.Padding = new Padding(3);
-            label1.Size = new Size(170, 21);
-            label1.TabIndex = 0;
-            label1.Text = "Readers (0 = sync, norm 8-32)";
+            ReaderLabel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            ReaderLabel.AutoSize = true;
+            ReaderLabel.Location = new Point(3, 3);
+            ReaderLabel.Margin = new Padding(3);
+            ReaderLabel.Name = "ReaderLabel";
+            ReaderLabel.Padding = new Padding(3);
+            ReaderLabel.Size = new Size(170, 21);
+            ReaderLabel.TabIndex = 0;
+            ReaderLabel.Text = "Readers (0 = sync, norm 8-32)";
             // 
-            // panel2
+            // InserterPanel
             // 
-            panel2.AutoSize = true;
-            panel2.Controls.Add(InserterNumeric);
-            panel2.Controls.Add(label2);
-            panel2.Location = new Point(148, 67);
-            panel2.Margin = new Padding(15, 0, 15, 0);
-            panel2.Name = "panel2";
-            panel2.Size = new Size(178, 52);
-            panel2.TabIndex = 3;
+            InserterPanel.Controls.Add(InserterNumeric);
+            InserterPanel.Controls.Add(InserterLabel);
+            InserterPanel.Location = new Point(148, 67);
+            InserterPanel.Margin = new Padding(15, 0, 15, 0);
+            InserterPanel.Name = "InserterPanel";
+            InserterPanel.Size = new Size(178, 52);
+            InserterPanel.TabIndex = 3;
             // 
             // InserterNumeric
             // 
@@ -257,27 +264,63 @@ namespace Ellab_Resource_Translater
             InserterNumeric.Location = new Point(3, 26);
             InserterNumeric.Maximum = new decimal(new int[] { 32, 0, 0, 0 });
             InserterNumeric.Name = "InserterNumeric";
-            InserterNumeric.Size = new Size(150, 23);
+            InserterNumeric.Size = new Size(172, 23);
             InserterNumeric.TabIndex = 1;
             InserterNumeric.Value = new decimal(new int[] { 4, 0, 0, 0 });
             InserterNumeric.ValueChanged += InserterNumeric_ValueChanged;
             // 
-            // label2
+            // InserterLabel
             // 
-            label2.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            label2.AutoSize = true;
-            label2.Location = new Point(3, 3);
-            label2.Margin = new Padding(3);
-            label2.Name = "label2";
-            label2.Padding = new Padding(3);
-            label2.Size = new Size(135, 21);
-            label2.TabIndex = 0;
-            label2.Text = "Inserters (0 = sync, 1-8)";
+            InserterLabel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            InserterLabel.AutoSize = true;
+            InserterLabel.Location = new Point(3, 3);
+            InserterLabel.Margin = new Padding(3);
+            InserterLabel.Name = "InserterLabel";
+            InserterLabel.Padding = new Padding(3);
+            InserterLabel.Size = new Size(135, 21);
+            InserterLabel.TabIndex = 0;
+            InserterLabel.Text = "Inserters (0 = sync, 1-8)";
+            // 
+            // DelayPanel
+            // 
+            DelayPanel.AutoSize = true;
+            DelayPanel.Controls.Add(DelayNumeric);
+            DelayPanel.Controls.Add(DelayLabel);
+            DelayPanel.Location = new Point(148, 119);
+            DelayPanel.Margin = new Padding(15, 0, 15, 0);
+            DelayPanel.Name = "DelayPanel";
+            DelayPanel.Size = new Size(178, 52);
+            DelayPanel.TabIndex = 4;
+            // 
+            // DelayNumeric
+            // 
+            DelayNumeric.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            DelayNumeric.Increment = new decimal(new int[] { 10, 0, 0, 0 });
+            DelayNumeric.Location = new Point(3, 26);
+            DelayNumeric.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
+            DelayNumeric.Minimum = new decimal(new int[] { 10, 0, 0, 0 });
+            DelayNumeric.Name = "DelayNumeric";
+            DelayNumeric.Size = new Size(172, 23);
+            DelayNumeric.TabIndex = 1;
+            DelayNumeric.Value = new decimal(new int[] { 100, 0, 0, 0 });
+            DelayNumeric.ValueChanged += DelayNumeric_ValueChanged;
+            // 
+            // DelayLabel
+            // 
+            DelayLabel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            DelayLabel.AutoSize = true;
+            DelayLabel.Location = new Point(3, 3);
+            DelayLabel.Margin = new Padding(3);
+            DelayLabel.Name = "DelayLabel";
+            DelayLabel.Padding = new Padding(3);
+            DelayLabel.Size = new Size(155, 21);
+            DelayLabel.TabIndex = 0;
+            DelayLabel.Text = "ms to wait between checks";
             // 
             // CloseOnSuccess
             // 
             CloseOnSuccess.AutoSize = true;
-            CloseOnSuccess.Location = new Point(151, 119);
+            CloseOnSuccess.Location = new Point(151, 171);
             CloseOnSuccess.Margin = new Padding(18, 0, 15, 0);
             CloseOnSuccess.Name = "CloseOnSuccess";
             CloseOnSuccess.Size = new Size(172, 19);
@@ -285,6 +328,10 @@ namespace Ellab_Resource_Translater
             CloseOnSuccess.Text = "Close Program if Successful";
             CloseOnSuccess.UseVisualStyleBackColor = true;
             CloseOnSuccess.CheckedChanged += CloseOnSuccess_CheckedChanged;
+            // 
+            // TooltipNormal
+            // 
+            TooltipNormal.AutomaticDelay = 100;
             // 
             // Settings
             // 
@@ -301,12 +348,15 @@ namespace Ellab_Resource_Translater
             TranslationPanel.ResumeLayout(false);
             FlowLayoutPanel1.ResumeLayout(false);
             FlowLayoutPanel1.PerformLayout();
-            panel1.ResumeLayout(false);
-            panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)CoresNumeric).EndInit();
-            panel2.ResumeLayout(false);
-            panel2.PerformLayout();
+            ReaderPanel.ResumeLayout(false);
+            ReaderPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)ReaderNumeric).EndInit();
+            InserterPanel.ResumeLayout(false);
+            InserterPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)InserterNumeric).EndInit();
+            DelayPanel.ResumeLayout(false);
+            DelayPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)DelayNumeric).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -325,12 +375,16 @@ namespace Ellab_Resource_Translater
         private Label TranslationLabel;
         private CheckedListBox TranslationCheckedListBox;
         private FlowLayoutPanel FlowLayoutPanel1;
-        private Panel panel1;
-        private NumericUpDown CoresNumeric;
-        private Label label1;
+        private Panel ReaderPanel;
+        private NumericUpDown ReaderNumeric;
+        private Label ReaderLabel;
         private CheckBox CloseOnSuccess;
-        private Panel panel2;
+        private Panel InserterPanel;
         private NumericUpDown InserterNumeric;
-        private Label label2;
+        private Label InserterLabel;
+        private ToolTip TooltipNormal;
+        private Panel DelayPanel;
+        private NumericUpDown DelayNumeric;
+        private Label DelayLabel;
     }
 }

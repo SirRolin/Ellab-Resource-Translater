@@ -116,7 +116,7 @@ namespace Ellab_Resource_Translater.Util
                                 break;
                         } else
                         {
-                            Task.Delay(100).Wait();
+                            Task.Delay(Config.Get().checkDelay).Wait();
                         }
                     }
                 });
@@ -252,7 +252,7 @@ namespace Ellab_Resource_Translater.Util
                 catch
                 {
                     tries++;
-                    Task.Delay(500).Wait(); // Wait half a second.
+                    Task.Delay(Config.Get().checkDelay * 5).Wait();
                 }
                 if (tries == 2)
                 {

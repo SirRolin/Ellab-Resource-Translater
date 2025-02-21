@@ -77,11 +77,15 @@ namespace Ellab_Resource_Translater
 
             EMsuitePath.Text = config.EMPath;
             ValPath.Text = config.ValPath;
-            CoresNumeric.Value = config.threadsToUse;
+            ReaderNumeric.Value = config.threadsToUse;
             InserterNumeric.Value = config.insertersToUse;
             CloseOnSuccess.Checked = config.closeOnceDone;
             Config.AssignSizeSetting(this, (s) => config.SettingWindowSize = s, this.Size);
             setup--;
+
+            TooltipNormal.SetToolTip(ReaderLabel, "Amount of threads to use when reading/writing from/to the disk");
+            TooltipNormal.SetToolTip(InserterLabel, "Amount of threads to use when writing to the database");
+            TooltipNormal.SetToolTip(DelayLabel, "");
         }
 
         private void Settings_Exit(object? sender, EventArgs e)
@@ -113,7 +117,7 @@ namespace Ellab_Resource_Translater
             if (setup > 0)
                 return;
 
-            Config.Get().threadsToUse = (int)CoresNumeric.Value;
+            Config.Get().threadsToUse = (int)ReaderNumeric.Value;
         }
 
         private void CloseOnSuccess_CheckedChanged(object sender, EventArgs e)
@@ -132,6 +136,11 @@ namespace Ellab_Resource_Translater
                 return;
 
             Config.Get().insertersToUse = (int)InserterNumeric.Value;
+        }
+
+        private void DelayNumeric_ValueChanged(object sender, EventArgs e)
+        {
+            Config.Get().checkDelay = Convert.ToInt32(DelayNumeric.Value);
         }
     }
 }

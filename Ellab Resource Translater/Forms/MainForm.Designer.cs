@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             SettingsButton = new Button();
             flowLayoutPanel1 = new FlowLayoutPanel();
             translationPanel = new Panel();
@@ -51,7 +52,7 @@
             EMandValButton = new Button();
             EMSuiteButton = new Button();
             ValSuiteButton = new Button();
-            sqlCommand1 = new Microsoft.Data.SqlClient.SqlCommand();
+            TooltipNormal = new ToolTip(components);
             flowLayoutPanel1.SuspendLayout();
             translationPanel.SuspendLayout();
             progresPanel.SuspendLayout();
@@ -66,7 +67,7 @@
             // SettingsButton
             // 
             SettingsButton.Dock = DockStyle.Right;
-            SettingsButton.Location = new Point(226, 5);
+            SettingsButton.Location = new Point(230, 5);
             SettingsButton.MinimumSize = new Size(0, 30);
             SettingsButton.Name = "SettingsButton";
             SettingsButton.Size = new Size(75, 30);
@@ -84,7 +85,7 @@
             flowLayoutPanel1.Margin = new Padding(0);
             flowLayoutPanel1.Name = "flowLayoutPanel1";
             flowLayoutPanel1.Padding = new Padding(15);
-            flowLayoutPanel1.Size = new Size(306, 571);
+            flowLayoutPanel1.Size = new Size(310, 571);
             flowLayoutPanel1.TabIndex = 0;
             // 
             // translationPanel
@@ -136,14 +137,14 @@
             progresPanel.MinimumSize = new Size(100, 100);
             progresPanel.Name = "progresPanel";
             progresPanel.Padding = new Padding(15);
-            progresPanel.Size = new Size(577, 611);
+            progresPanel.Size = new Size(590, 611);
             progresPanel.TabIndex = 0;
             // 
             // CancellationButton
             // 
             CancellationButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             CancellationButton.Enabled = false;
-            CancellationButton.Location = new Point(486, 7);
+            CancellationButton.Location = new Point(499, 7);
             CancellationButton.Name = "CancellationButton";
             CancellationButton.Size = new Size(75, 23);
             CancellationButton.TabIndex = 1;
@@ -160,7 +161,7 @@
             progressListView.MultiSelect = false;
             progressListView.Name = "progressListView";
             progressListView.ShowGroups = false;
-            progressListView.Size = new Size(547, 551);
+            progressListView.Size = new Size(560, 551);
             progressListView.TabIndex = 0;
             progressListView.TabStop = false;
             progressListView.UseCompatibleStateImageBehavior = false;
@@ -172,7 +173,7 @@
             progressTracker.Location = new Point(15, 30);
             progressTracker.Margin = new Padding(0);
             progressTracker.Name = "progressTracker";
-            progressTracker.Size = new Size(547, 15);
+            progressTracker.Size = new Size(560, 15);
             progressTracker.TabIndex = 0;
             progressTracker.Text = "x out of y";
             progressTracker.TextAlign = ContentAlignment.MiddleCenter;
@@ -183,7 +184,7 @@
             progressTitle.Location = new Point(15, 15);
             progressTitle.Margin = new Padding(0);
             progressTitle.Name = "progressTitle";
-            progressTitle.Size = new Size(547, 15);
+            progressTitle.Size = new Size(560, 15);
             progressTitle.TabIndex = 0;
             progressTitle.Text = "nothing running";
             progressTitle.TextAlign = ContentAlignment.MiddleCenter;
@@ -208,8 +209,8 @@
             splitContainer1.Panel2.Controls.Add(flowLayoutPanel1);
             splitContainer1.Panel2.Controls.Add(ButtonPanel);
             splitContainer1.Panel2MinSize = 290;
-            splitContainer1.Size = new Size(884, 611);
-            splitContainer1.SplitterDistance = 577;
+            splitContainer1.Size = new Size(901, 611);
+            splitContainer1.SplitterDistance = 590;
             splitContainer1.SplitterWidth = 1;
             splitContainer1.TabIndex = 0;
             splitContainer1.TabStop = false;
@@ -228,13 +229,13 @@
             DBConnectionPanel.ForeColor = SystemColors.ControlText;
             DBConnectionPanel.Location = new Point(0, 520);
             DBConnectionPanel.Name = "DBConnectionPanel";
-            DBConnectionPanel.Size = new Size(306, 91);
+            DBConnectionPanel.Size = new Size(310, 91);
             DBConnectionPanel.TabIndex = 6;
             // 
             // DBConnectionSetup
             // 
             DBConnectionSetup.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            DBConnectionSetup.Location = new Point(236, 63);
+            DBConnectionSetup.Location = new Point(240, 63);
             DBConnectionSetup.Name = "DBConnectionSetup";
             DBConnectionSetup.Size = new Size(65, 23);
             DBConnectionSetup.TabIndex = 2;
@@ -245,7 +246,7 @@
             // AzureSettingsSetup
             // 
             AzureSettingsSetup.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            AzureSettingsSetup.Location = new Point(170, 63);
+            AzureSettingsSetup.Location = new Point(174, 63);
             AzureSettingsSetup.Name = "AzureSettingsSetup";
             AzureSettingsSetup.Size = new Size(60, 23);
             AzureSettingsSetup.TabIndex = 4;
@@ -265,7 +266,7 @@
             // RefreshAzureButton
             // 
             RefreshAzureButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            RefreshAzureButton.Location = new Point(241, 11);
+            RefreshAzureButton.Location = new Point(245, 11);
             RefreshAzureButton.Name = "RefreshAzureButton";
             RefreshAzureButton.Size = new Size(60, 23);
             RefreshAzureButton.TabIndex = 5;
@@ -278,7 +279,7 @@
             AzureConnectionStatus.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             AzureConnectionStatus.Location = new Point(15, 15);
             AzureConnectionStatus.Name = "AzureConnectionStatus";
-            AzureConnectionStatus.Size = new Size(210, 19);
+            AzureConnectionStatus.Size = new Size(214, 19);
             AzureConnectionStatus.TabIndex = 3;
             AzureConnectionStatus.Text = "Azure AI Connection Status";
             AzureConnectionStatus.TextAlign = ContentAlignment.MiddleLeft;
@@ -286,7 +287,7 @@
             // RefreshConnectionButton
             // 
             RefreshConnectionButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            RefreshConnectionButton.Location = new Point(241, 34);
+            RefreshConnectionButton.Location = new Point(245, 34);
             RefreshConnectionButton.Name = "RefreshConnectionButton";
             RefreshConnectionButton.Size = new Size(60, 23);
             RefreshConnectionButton.TabIndex = 1;
@@ -299,7 +300,7 @@
             connectionStatus.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             connectionStatus.Location = new Point(15, 34);
             connectionStatus.Name = "connectionStatus";
-            connectionStatus.Size = new Size(211, 19);
+            connectionStatus.Size = new Size(215, 19);
             connectionStatus.TabIndex = 0;
             connectionStatus.Text = "Database Connection Status";
             connectionStatus.TextAlign = ContentAlignment.MiddleLeft;
@@ -317,14 +318,14 @@
             ButtonPanel.MinimumSize = new Size(0, 40);
             ButtonPanel.Name = "ButtonPanel";
             ButtonPanel.Padding = new Padding(5);
-            ButtonPanel.Size = new Size(306, 40);
+            ButtonPanel.Size = new Size(310, 40);
             ButtonPanel.TabIndex = 0;
             // 
             // EMandValButton
             // 
             EMandValButton.BackColor = SystemColors.Control;
             EMandValButton.Dock = DockStyle.Right;
-            EMandValButton.Location = new Point(1, 5);
+            EMandValButton.Location = new Point(5, 5);
             EMandValButton.Margin = new Padding(0);
             EMandValButton.MinimumSize = new Size(0, 30);
             EMandValButton.Name = "EMandValButton";
@@ -338,7 +339,7 @@
             // 
             EMSuiteButton.BackColor = SystemColors.Control;
             EMSuiteButton.Dock = DockStyle.Right;
-            EMSuiteButton.Location = new Point(76, 5);
+            EMSuiteButton.Location = new Point(80, 5);
             EMSuiteButton.Margin = new Padding(0);
             EMSuiteButton.MinimumSize = new Size(0, 30);
             EMSuiteButton.Name = "EMSuiteButton";
@@ -352,7 +353,7 @@
             // 
             ValSuiteButton.BackColor = SystemColors.Control;
             ValSuiteButton.Dock = DockStyle.Right;
-            ValSuiteButton.Location = new Point(151, 5);
+            ValSuiteButton.Location = new Point(155, 5);
             ValSuiteButton.MinimumSize = new Size(0, 30);
             ValSuiteButton.Name = "ValSuiteButton";
             ValSuiteButton.Size = new Size(75, 30);
@@ -361,17 +362,19 @@
             ValSuiteButton.UseVisualStyleBackColor = true;
             ValSuiteButton.Click += ValSuite_Initiation;
             // 
-            // sqlCommand1
+            // TooltipNormal
             // 
-            sqlCommand1.CommandTimeout = 30;
-            sqlCommand1.EnableOptimizedParameterBinding = false;
+            TooltipNormal.AutomaticDelay = 100;
+            TooltipNormal.AutoPopDelay = 0;
+            TooltipNormal.InitialDelay = 100;
+            TooltipNormal.ReshowDelay = 20;
             // 
             // MainForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
-            ClientSize = new Size(884, 611);
+            ClientSize = new Size(901, 611);
             Controls.Add(splitContainer1);
             Name = "MainForm";
             Text = "Ellab Resource Tranlator";
@@ -412,11 +415,11 @@
         private Label connectionStatus;
         private Button DBConnectionSetup;
         private Button RefreshConnectionButton;
-        private Microsoft.Data.SqlClient.SqlCommand sqlCommand1;
         private Button AzureSettingsSetup;
         private Label AzureConnectionStatus;
         private Label label2;
         private Button RefreshAzureButton;
         private Button CancellationButton;
+        private ToolTip TooltipNormal;
     }
 }

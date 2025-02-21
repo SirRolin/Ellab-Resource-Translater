@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using Ellab_Resource_Translater.Util;
 
 namespace Ellab_Resource_Translater.Objects.Extensions
 {
@@ -67,7 +68,7 @@ namespace Ellab_Resource_Translater.Objects.Extensions
                 }
 
                 if (!conn.State.HasFlag(ConnectionState.Open))
-                    Task.Delay(100).Wait();
+                    Task.Delay(Config.Get().checkDelay).Wait();
             }
         }
 
@@ -78,7 +79,7 @@ namespace Ellab_Resource_Translater.Objects.Extensions
 
             while (conn.State.HasFlag(ConnectionState.Executing) || conn.State.HasFlag(ConnectionState.Fetching))
             {
-                Task.Delay(100).Wait();
+                Task.Delay(Config.Get().checkDelay).Wait();
             }
         }
 

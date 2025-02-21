@@ -74,7 +74,7 @@ namespace Ellab_Resource_Translater.Objects
                 }
 
                 if(!conn.State.HasFlag(ConnectionState.Open))
-                    Task.Delay(100).Wait();
+                    Task.Delay(Config.Get().checkDelay).Wait();
             }
         }
 
@@ -85,7 +85,7 @@ namespace Ellab_Resource_Translater.Objects
 
             while (conn.State.HasFlag(ConnectionState.Executing) || conn.State.HasFlag(ConnectionState.Fetching))
             {
-                Task.Delay(100).Wait();
+                Task.Delay(Config.Get().checkDelay).Wait();
             }
         }
 

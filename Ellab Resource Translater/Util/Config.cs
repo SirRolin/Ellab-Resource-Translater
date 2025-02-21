@@ -41,6 +41,7 @@ namespace Ellab_Resource_Translater.Util
         public Size MainWindowSize = new(900, 650);
         public Size SettingWindowSize = new(600, 400);
         public bool closeOnceDone = false;
+        public int checkDelay = 100;
 
         // Singleton instanciation accessed with Get()
         private static Config? instance;
@@ -51,7 +52,16 @@ namespace Ellab_Resource_Translater.Util
             this.languagesToAiTranslate.RemoveAll(x => languagesNotToAi.Contains(x));
         }
         [JsonConstructor]
-        public Config(string eMPath, string ValPath, List<string> languagesToTranslate, List<string> languagesToAiTranslate, int threadsToUse, int insertersToUse, Size? MainWindowSize, Size? SettingWindowSize, bool closeOnceDone)
+        public Config(Size? MainWindowSize,
+                      Size? SettingWindowSize,
+                      List<string> languagesToTranslate,
+                      List<string> languagesToAiTranslate,
+                      string eMPath,
+                      string ValPath,
+                      int threadsToUse = 32,
+                      int insertersToUse = 4,
+                      bool closeOnceDone = false,
+                      int checkDelay = 100)
         {
             this.EMPath = eMPath ?? this.EMPath;
             this.ValPath = ValPath ?? this.ValPath;
@@ -62,6 +72,7 @@ namespace Ellab_Resource_Translater.Util
             this.MainWindowSize = MainWindowSize ?? new(900, 650);
             this.SettingWindowSize = SettingWindowSize ?? new(600, 400);
             this.closeOnceDone = closeOnceDone;
+            this.checkDelay = checkDelay;
         }
 
         public static Config Get()
