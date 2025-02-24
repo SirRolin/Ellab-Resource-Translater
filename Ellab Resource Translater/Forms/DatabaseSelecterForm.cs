@@ -103,6 +103,11 @@ namespace Ellab_Resource_Translater.Forms
                 SecretManager.SetUserSecret(MainForm.CONNECTION_SECRET, connectionString);
                 mainFormParent.TryConnectDB();
                 this.Close();
+            } 
+            else if(connectionString != "")
+            {
+                // For the future, to give a message for debugging.
+                MessageBox.Show("Either the string is wrong or the DBStringHandler is not picking the string up correctly.");
             }
         }
 
