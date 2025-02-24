@@ -77,7 +77,7 @@ namespace Ellab_Resource_Translater
 
                 if (connString != null)
                 {
-                    connString = "Data Source=tcp:ellabcloudsqlserver.database.windows.net;Initial Catalog=EllabWebTranslatorDB;Persist Security Info=True;User ID=AITranslator;Password=a158it49&l;Encrypt=True";
+                    connString = DatabaseSelecterForm.DEFAULTSERVERSTRING;
                     SecretManager.SetUserSecret(CONNECTION_SECRET, connString);
                 }
                     

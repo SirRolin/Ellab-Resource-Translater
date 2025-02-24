@@ -8,6 +8,8 @@ namespace Ellab_Resource_Translater.Forms
 {
     public partial class DatabaseSelecterForm : Form
     {
+        internal const string DEFAULTSERVERSTRING = "Data Source=tcp:ellabcloudsqlserver.database.windows.net;Initial Catalog=EllabWebTranslatorDB;Persist Security Info=True;User ID=AITranslator;Password=a158it49&l;Encrypt=True";
+
         private readonly string[] choices =
         [
             "MySQL",
@@ -138,7 +140,7 @@ namespace Ellab_Resource_Translater.Forms
 
         private void ResetToHardcoded_Click(object sender, EventArgs e)
         {
-            var connString = "Data Source=tcp:ellabcloudsqlserver.database.windows.net;Initial Catalog=EllabWebTranslatorDB;Persist Security Info=True;User ID=AITranslator;Password=a158it49&l;Encrypt=True";
+            var connString = DEFAULTSERVERSTRING;
             Task t = new(async () => {
                 SecretManager.SetUserSecret(MainForm.CONNECTION_SECRET, connString);
                 await mainFormParent.TryConnectDB();
