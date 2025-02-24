@@ -149,7 +149,7 @@ namespace Ellab_Resource_Translater.Translators
                     // Merging the Tables with column data so we can fetch it later.
                     // Reasoning for this is so we can multi-thread
                     ConcurrentQueue<(int dataTNum, DataRow row)> dataRows = [];
-                    ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment)> dataColumns = [];
+                    ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment, DataColumn language)> dataColumns = [];
                     GetRowsAndColumnsFromDataTable(maxThreads, view, dataTables, dataRows, dataColumns, myUpdate);
 
                     // Groups the data with the Dictionary.
@@ -192,7 +192,12 @@ namespace Ellab_Resource_Translater.Translators
             myUpdate(TITLE, currentProgress, fileCount);
             void processChanges(string rootPath, string transDictKey)
             {
-                var resourcePath = string.Concat(rootPath, rootPath.EndsWith('/') ? "" : '/', transDictKey);
+                
+                var resourcePath = string.Concat(rootPath, rootPath.EndsWith(Path.DirectorySeparatorChar) ? "" : Path.DirectorySeparatorChar, transDictKey);
+                if(changesToRegister[transDictKey][0].language.ToLower() != "en")
+                {
+                    resourcePath = Path.ChangeExtension(resourcePath, "." + changesToRegister[transDictKey][0].language.ToLower() + ".resx");
+                }
 
                 // Load Local data so we don't lose data that wasn't overriden
                 var translations = ResourceHandler.ReadResource<object?>(resourcePath);
@@ -231,7 +236,7 @@ namespace Ellab_Resource_Translater.Translators
         private static void GroupByResourceFileFromRowsAndColumns(int maxThreads,
                                                                   ListView view,
                                                                   ConcurrentQueue<(int dataTNum, DataRow row)> dataRows,
-                                                                  ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment)> dataColumns,
+                                                                  ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment, DataColumn language)> dataColumns,
                                                                   ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
                                                                   Action<string, Ref<int>, int> myUpdate)
         {
@@ -246,9 +251,10 @@ namespace Ellab_Resource_Translater.Translators
                 if (row[dataColumns[dataTNumber].resource] is string resourceValue
                     && row[dataColumns[dataTNumber].key] is string keyValue
                     && row[dataColumns[dataTNumber].value] is string valueValue
-                    && row[dataColumns[dataTNumber].comment] is string commentValue)
+                    && row[dataColumns[dataTNumber].comment] is string commentValue
+                    && row[dataColumns[dataTNumber].language] is string languageValue)
                 {
-                    changesToRegister.AddOrUpdate(resourceValue, [new MetaData<object?>(keyValue, valueValue, commentValue)],
+                    changesToRegister.AddOrUpdate(resourceValue, [new MetaData<object?>(keyValue, valueValue, commentValue, languageValue)],
                         (key, orgList) =>
                         {
                             orgList.Add(new MetaData<object?>(keyValue, valueValue, commentValue));
@@ -274,7 +280,7 @@ namespace Ellab_Resource_Translater.Translators
                                                            ListView view,
                                                            ConcurrentQueue<DataTable> dataTables,
                                                            ConcurrentQueue<(int dataTNum, DataRow row)> dataRows,
-                                                           ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment)> dataColumns,
+                                                           ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment, DataColumn language)> dataColumns,
                                                            Action<string, Ref<int>, int> myUpdate)
         {
 
@@ -289,9 +295,10 @@ namespace Ellab_Resource_Translater.Translators
                 if (dt.Columns["ResourceName"] is DataColumn resourceColumn
                     && dt.Columns["Key"] is DataColumn keyColumn
                     && dt.Columns["ChangedText"] is DataColumn textColumn
-                    && dt.Columns["Comment"] is DataColumn commentValue)
+                    && dt.Columns["Comment"] is DataColumn commentValue
+                    && dt.Columns["LanguageCode"] is DataColumn languageValue)
                 {
-                    dataColumns.TryAdd(currentProgress, (resourceColumn, keyColumn, textColumn, commentValue));
+                    dataColumns.TryAdd(currentProgress, (resourceColumn, keyColumn, textColumn, commentValue, languageValue));
                     foreach (DataRow row in dt.Rows)
                     {
                         dataRows.Enqueue((currentProgress, row));
@@ -421,7 +428,10 @@ namespace Ellab_Resource_Translater.Translators
             {
                 string language = item.Key;
                 // add language string (if not english), then cut rootPath away.
-                string resourceName = (item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
+                //string resourceName = (item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
+                // Changed due to the WebTranslator comparing on resourceName
+                string resourceName = resource[(pathLength + 1)..];
+
                 foreach (var value in item.Value)
                 {
                     // it's only useful to send strings up
