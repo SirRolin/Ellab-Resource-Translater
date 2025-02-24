@@ -117,9 +117,9 @@ namespace Ellab_Resource_Translater.Forms
         private string MySqlConnString()
         {
             StringBuilder sb = new();
-            sb.Append($"Server ={ MySqlServerText.Text};");
-            if(MySqlPortText.Text.Length > 0)
-                sb.Append($"port={ MySqlPortText.Text};");
+            sb.Append($"Server ={MySqlServerText.Text};");
+            if (MySqlPortText.Text.Length > 0)
+                sb.Append($"port={MySqlPortText.Text};");
             sb.Append($"Database={MySqlDatabaseText.Text};Uid={MySqlUserIDText.Text};Pwd={MySqlPasswordText};Encrypt=True;SslMode=Required;default command timeout=30;");
             return sb.ToString();
         }
@@ -134,6 +134,17 @@ namespace Ellab_Resource_Translater.Forms
         {
             MSSqlUserIDText.Enabled = MSSqlISCheckBox.Checked;
             MSSqlPasswordText.Enabled = MSSqlISCheckBox.Checked;
+        }
+
+        private void ResetToHardcoded_Click(object sender, EventArgs e)
+        {
+            var connString = "Data Source=tcp:ellabcloudsqlserver.database.windows.net;Initial Catalog=EllabWebTranslatorDB;Persist Security Info=True;User ID=AITranslator;Password=a158it49&l;Encrypt=True";
+            Task t = new(async () => {
+                SecretManager.SetUserSecret(MainForm.CONNECTION_SECRET, connString);
+                await mainFormParent.TryConnectDB();
+                });
+            t.Start();
+            this.Close();
         }
     }
 }

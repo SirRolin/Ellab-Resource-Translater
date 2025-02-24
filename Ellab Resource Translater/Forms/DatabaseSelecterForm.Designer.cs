@@ -43,6 +43,7 @@
             MySqlISLabel = new Label();
             MySqlISCheckBox = new CheckBox();
             HeaderPanel = new Panel();
+            ResetToHardcodedButton = new Button();
             SaveButton = new Button();
             connectionStringChoice = new ComboBox();
             ServerTypeLabel = new Label();
@@ -253,6 +254,7 @@
             // 
             HeaderPanel.AutoSize = true;
             HeaderPanel.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            HeaderPanel.Controls.Add(ResetToHardcodedButton);
             HeaderPanel.Controls.Add(SaveButton);
             HeaderPanel.Controls.Add(connectionStringChoice);
             HeaderPanel.Controls.Add(ServerTypeLabel);
@@ -261,6 +263,16 @@
             HeaderPanel.Name = "HeaderPanel";
             HeaderPanel.Size = new Size(562, 31);
             HeaderPanel.TabIndex = 6;
+            // 
+            // ResetToHardcodedButton
+            // 
+            ResetToHardcodedButton.Location = new Point(388, 5);
+            ResetToHardcodedButton.Name = "ResetToHardcodedButton";
+            ResetToHardcodedButton.Size = new Size(75, 23);
+            ResetToHardcodedButton.TabIndex = 3;
+            ResetToHardcodedButton.Text = "Default";
+            ResetToHardcodedButton.UseVisualStyleBackColor = true;
+            ResetToHardcodedButton.Click += ResetToHardcoded_Click;
             // 
             // SaveButton
             // 
@@ -721,5 +733,6 @@
         private Label label5;
         private TextBox PostgresPortText;
         private Label label2;
+        private Button ResetToHardcodedButton;
     }
 }
