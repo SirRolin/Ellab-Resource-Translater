@@ -45,12 +45,14 @@ namespace Ellab_Resource_Translater.Util
             connectionString = JsonExtractIfNeeded(connectionString);
 
             // Each Connection type have different setups
-            if (connectionString.Contains("Server")
+            if ((connectionString.Contains("Server")
+                || connectionString.Contains("Data Source"))
                 && connectionString.Contains("User ID")
                 && connectionString.Contains("Password"))
                 return ConnType.MSSql;
 
-            else if (connectionString.Contains("Server")
+            else if ((connectionString.Contains("Server")
+                     || connectionString.Contains("Data Source"))
                      && connectionString.Contains("Integrated Security=True"))
                 return ConnType.MSSqlIS;
 
@@ -63,7 +65,8 @@ namespace Ellab_Resource_Translater.Util
             else if ((connectionString.Contains("Data Source")
                      || connectionString.Contains("Server"))
                      && connectionString.Contains("IntegratedSecurity = yes")
-                     && connectionString.Contains("Uid=auth_windows"))
+                     && (connectionString.Contains("Uid=auth_windows"))
+                     || connectionString.Contains("User ID=auth_windows"))
                 return ConnType.MySqlIS;
 
             else if (connectionString.Contains("Host")

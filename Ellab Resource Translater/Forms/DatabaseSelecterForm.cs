@@ -1,17 +1,8 @@
 ﻿using Ellab_Resource_Translater.Enums;
 using Ellab_Resource_Translater.Util;
-using MySqlX.XDevAPI;
-using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Runtime.CompilerServices;
+using Microsoft.VisualBasic;
 using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using System.Text.RegularExpressions;
 
 namespace Ellab_Resource_Translater.Forms
 {
@@ -95,6 +86,15 @@ namespace Ellab_Resource_Translater.Forms
 
             // In Case someone somehow can input something wrong in a dropdownlist
             if (connectionString == "") return;
+
+            Regex passwordIsAsteriskRegex = new("(Password=)(\\**)(;)", RegexOptions.IgnoreCase);
+            MatchCollection matches = passwordIsAsteriskRegex.Matches(connectionString);
+            if (matches.Count > 0)
+            {
+                var password = Interaction.InputBox("Password:", "Raw Paste Detected, replaceing password");
+                connectionString = passwordIsAsteriskRegex.Replace(connectionString, "$1" + password + "$3");
+            }
+
 
             if (DBStringHandler.DetectType(connectionString) != ConnType.None)
             {

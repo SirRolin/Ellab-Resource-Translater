@@ -97,6 +97,7 @@ namespace Ellab_Resource_Translater
                     catch (Exception ex)
                     {
                         UpdateConnectionStatus(ex.Message);
+                        RefreshConnectionButton.Invoke(() => RefreshConnectionButton.Enabled = true);
                         return;
                     }
                     return;
@@ -156,6 +157,8 @@ namespace Ellab_Resource_Translater
                         {
                             msWaitTime = Config.Get().checkDelay
                         };
+                        if (!translationService.CanReachAzure().Result)
+                            throw new Exception("Cannot Reach Azure");
 
                         AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = "Azure Connected");
                     }
