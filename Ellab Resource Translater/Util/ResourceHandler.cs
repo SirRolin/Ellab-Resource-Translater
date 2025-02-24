@@ -1,6 +1,7 @@
 ﻿using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Objects.Extensions;
 using System.Collections;
+using System.Linq;
 using System.Resources;
 
 namespace Ellab_Resource_Translater.Util
@@ -96,7 +97,7 @@ namespace Ellab_Resource_Translater.Util
                     translations.Add(lang, ResourceHandler.ReadResource<object?>(langPath));
 
                 // Add all missing translations
-                foreach (string entry in translations["EN"].Keys)
+                /*foreach (string entry in translations["EN"].Keys)
                 {
                     if (!translations[lang].TryGetValue(entry, out MetaData<object?>? trans) || (trans.value is string strVal && string.IsNullOrEmpty(strVal)))
                     {
@@ -110,7 +111,7 @@ namespace Ellab_Resource_Translater.Util
                         trans = new MetaData<object?>(entry, value, comment);
                         translations[lang].Add(entry, trans);
                     }
-                }
+                }*/
             }
 
             return translations;
@@ -157,17 +158,31 @@ namespace Ellab_Resource_Translater.Util
         public static void TranslateMissingValuesToLang(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, TranslationService? TranslationService)
         {
             // Find missing translation keys
-            List<MetaData<object?>> emptyTranslations = [.. translations[lang].Values.Where(x => x.value is string str && str == string.Empty)];
+            List<MetaData<string>> missingTranslations = [];
+            foreach (string entry in translations["EN"].Keys)
+            {
+                bool NotAlreadyTranslated = !translations[lang].TryGetValue(entry, out MetaData<object?>? trans) || (trans.value is string strVal && string.IsNullOrEmpty(strVal));
+                if (translations["EN"][entry].value is string enValue && NotAlreadyTranslated)
+                {
+                    var value = enValue;
+                    var comment = translations["EN"][entry].comment;
+
+                    // Add it to the Languages Dictionary
+                    missingTranslations.Add(new MetaData<string>(entry, value, comment));
+                }
+            }
+            ////This is from before we wanted untranslated resources not to get saved as english in other language files.
+            //List<MetaData<object?>> emptyTranslations = [.. translations[lang].Values.Where(x => x.value is string str && str == string.Empty)];
 
             // Nothing to translate? return
-            if (emptyTranslations.Count == 0 || TranslationService != null)
+            if (missingTranslations.Count == 0 || TranslationService != null)
                 return;
 
             // Get missing translation values in english as a Reverse Dictionary
             // Filter so we don't get errors
             // GroupBy so that dublicate values doesn't break as it becomes a key
             // Another Filter to remove the once that doesn't have a text in english (can't translate empty string)
-            Dictionary<string, MetaData<string>[]> kvp = emptyTranslations
+            Dictionary<string, MetaData<string>[]> kvp = missingTranslations
                 .Where(x => x.value is string).Select(x => new MetaData<string>(x.key, x.value?.ToString() ?? string.Empty, x.comment))
                 .Where(x => translations["EN"].ContainsKey(x.key))
                 .GroupBy(keySelector: x => translations["EN"][x.key].value as string ?? string.Empty, x => x)
@@ -189,16 +204,17 @@ namespace Ellab_Resource_Translater.Util
                         if (text != null)
                         {
                             transItem.value = text;
-                            transItem.comment = String.Join("\n", transItem.comment, "Ai Translated.");
+                            transItem.comment = String.Join("\n", transItem.comment, "#AI");
                         }
                         else if (translations["EN"][itemST].value is string englishValue) // Shouldn't ever be false, but if it is, we avoid the error.
                         {
                             transItem.value = englishValue;
                             transItem.comment = String.Join("\n", transItem.comment, "Attempted Ai Translation Failed.");
                         }
+
+                        translations[lang].Add(transItem.key, new MetaData<object?>(transItem.key, transItem.value, transItem.comment));
                     }
                 }
-                ;
             }
         }
     }

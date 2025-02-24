@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 
 namespace Ellab_Resource_Translater.Translators
 {
-    public class DBProcessorBase(TranslationService? TranslationService, ConnectionProvider? connProv, CancellationTokenSource source, int systemEnum, int maxThreads = 32)
+    public class DBProcessorBase(TranslationService? TranslationService, ConnectionProvider? connProv, CancellationTokenSource source, Func<string, string> langToLocal, int systemEnum, int maxThreads = 32)
     {
         private readonly Config config = Config.Get();
 
@@ -60,6 +60,15 @@ namespace Ellab_Resource_Translater.Translators
                 };
             }
 
+            string getResourceName(DataTable dt)
+            {
+                string output = "<Unknown>";
+                // On Error DataTables are cleared, emptying them, but 
+                if (dt != null && dt.Rows.Count > 0 && dt.Columns.Contains("ResourceName"))
+                    output = dt.Rows[0]["ResourceName"].ToString() ?? "<Unknown>";
+                return output;
+            }
+
             // Setup a transaction handler, this makes it possible to cancel our work and revert back the changes on the database.
             dth = new(
                     source: source,
@@ -78,14 +87,7 @@ namespace Ellab_Resource_Translater.Translators
             // Starts transfer to Database
             if (connProv != null && !token.IsCancellationRequested)
             {
-                dth.StartCommands(connProv, progresText, view, (DataTable dt) =>
-                {
-                    string output = "<Unknown>";
-                    // On Error DataTables are cleared, emptying them, but 
-                    if (dt != null && dt.Rows.Count > 0 && dt.Columns.Contains("ResourceName"))
-                        output = dt.Rows[0]["ResourceName"].ToString() ?? "<Unknown>";
-                    return output;
-                });
+                dth.StartCommands(connProv, progresText, view, getResourceName);
             }
         }
 
@@ -177,7 +179,7 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private static void UpdateLocalFilesFromGroupedData(int maxThreads,
+        private void UpdateLocalFilesFromGroupedData(int maxThreads,
                                                             string path,
                                                             ListView view,
                                                             ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
@@ -194,9 +196,9 @@ namespace Ellab_Resource_Translater.Translators
             {
                 
                 var resourcePath = string.Concat(rootPath, rootPath.EndsWith(Path.DirectorySeparatorChar) ? "" : Path.DirectorySeparatorChar, transDictKey);
-                if(changesToRegister[transDictKey][0].language.ToLower() != "en")
+                if(!changesToRegister[transDictKey][0].language.Equals("en", StringComparison.CurrentCultureIgnoreCase))
                 {
-                    resourcePath = Path.ChangeExtension(resourcePath, "." + changesToRegister[transDictKey][0].language.ToLower() + ".resx");
+                    resourcePath = Path.ChangeExtension(resourcePath, langToLocal(changesToRegister[transDictKey][0].language) + ".resx");
                 }
 
                 // Load Local data so we don't lose data that wasn't overriden
@@ -233,7 +235,7 @@ namespace Ellab_Resource_Translater.Translators
             });
         }
 
-        private static void GroupByResourceFileFromRowsAndColumns(int maxThreads,
+        private void GroupByResourceFileFromRowsAndColumns(int maxThreads,
                                                                   ListView view,
                                                                   ConcurrentQueue<(int dataTNum, DataRow row)> dataRows,
                                                                   ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment, DataColumn language)> dataColumns,
@@ -254,6 +256,9 @@ namespace Ellab_Resource_Translater.Translators
                     && row[dataColumns[dataTNumber].comment] is string commentValue
                     && row[dataColumns[dataTNumber].language] is string languageValue)
                 {
+                    if(!languageValue.Equals("en", StringComparison.OrdinalIgnoreCase)){
+                        resourceValue = resourceValue.Insert(resourceValue.Length - 5, langToLocal(languageValue));
+                    }
                     changesToRegister.AddOrUpdate(resourceValue, [new MetaData<object?>(keyValue, valueValue, commentValue, languageValue)],
                         (key, orgList) =>
                         {
@@ -390,7 +395,7 @@ namespace Ellab_Resource_Translater.Translators
             foreach (var item in translations)
             {
                 if (!item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase))
-                    ResourceHandler.WriteResource(Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"), item.Value);
+                    ResourceHandler.WriteResource(Path.ChangeExtension(resource, $"{langToLocal(item.Key)}.resx"), item.Value);
             }
 
             // Try to write to the Database

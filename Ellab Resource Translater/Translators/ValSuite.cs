@@ -8,9 +8,15 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Translators
 {
-    internal class ValSuite(TranslationService? translationService, ConnectionProvider? DBCon, CancellationTokenSource source) : DBProcessorBase(translationService, DBCon, source, 0, Config.Get().threadsToUse)
+    internal class ValSuite(TranslationService? translationService, ConnectionProvider? DBCon, CancellationTokenSource source) : DBProcessorBase(translationService, DBCon, source, getLocaleVarient(), 0, Config.Get().threadsToUse)
     {
         internal string[] folders = ["dottxt20", "Popup20", "ReportTxtStr"];
+
+        private static Func<string, string> getLocaleVarient()
+        {
+            return lang => "." + lang.ToLower() + "-" + lang.ToUpper();
+        }
+
         internal void Run(string path, ListView view, Label progresText)
         {
             string folderStr = String.Join('|', folders);
