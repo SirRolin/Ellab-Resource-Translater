@@ -75,6 +75,14 @@ namespace Ellab_Resource_Translater
 
                 string? connString = SecretManager.GetUserSecret(CONNECTION_SECRET);
 
+                if (connString != null)
+                {
+                    connString = "Data Source=tcp:ellabcloudsqlserver.database.windows.net;Initial Catalog=EllabWebTranslatorDB;Persist Security Info=True;User ID=AITranslator;Password=a158it49&l;Encrypt=True";
+                    SecretManager.SetUserSecret(CONNECTION_SECRET, connString);
+                }
+                    
+
+
                 // Debugging
                 //RefreshConnectionButton.Invoke(() => MessageBox.Show(this, dbConn.Replace(";", ";\n")));
 
