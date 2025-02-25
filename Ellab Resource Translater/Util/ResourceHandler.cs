@@ -157,20 +157,7 @@ namespace Ellab_Resource_Translater.Util
         /// <param name="TranslationService">The service that uses ai to translate the entry values.</param>
         public static void TranslateMissingValuesToLang(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, TranslationService? TranslationService)
         {
-            // Find missing translation keys
-            List<MetaData<string>> missingTranslations = [];
-            foreach (string entry in translations["EN"].Keys)
-            {
-                bool NotAlreadyTranslated = !translations[lang].TryGetValue(entry, out MetaData<object?>? trans) || (trans.value is string strVal && string.IsNullOrEmpty(strVal));
-                if (translations["EN"][entry].value is string enValue && NotAlreadyTranslated)
-                {
-                    var value = enValue;
-                    var comment = translations["EN"][entry].comment;
-
-                    // Add it to the Languages Dictionary
-                    missingTranslations.Add(new MetaData<string>(entry, value, comment));
-                }
-            }
+            List<MetaData<string>> missingTranslations = GetMissingStringEntries(translations, lang, false);
             ////This is from before we wanted untranslated resources not to get saved as english in other language files.
             //List<MetaData<object?>> emptyTranslations = [.. translations[lang].Values.Where(x => x.value is string str && str == string.Empty)];
 
@@ -216,6 +203,26 @@ namespace Ellab_Resource_Translater.Util
                     }
                 }
             }
+        }
+
+        public static List<MetaData<string>> GetMissingStringEntries(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, bool valuesEmpty)
+        {
+            // Find missing translation keys
+            List<MetaData<string>> missingTranslations = [];
+            foreach (string entry in translations["EN"].Keys)
+            {
+                bool NotAlreadyTranslated = !translations[lang].TryGetValue(entry, out MetaData<object?>? trans) || (trans.value is string strVal && string.IsNullOrEmpty(strVal));
+                if (translations["EN"][entry].value is string enValue && NotAlreadyTranslated)
+                {
+                    var value = valuesEmpty ? string.Empty : enValue;
+                    var comment = translations["EN"][entry].comment;
+
+                    // Add it to the Languages Dictionary
+                    missingTranslations.Add(new MetaData<string>(entry, value, comment));
+                }
+            }
+
+            return missingTranslations;
         }
     }
 }

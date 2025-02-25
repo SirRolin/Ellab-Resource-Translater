@@ -30,7 +30,7 @@ namespace Ellab_Resource_Translater.Objects.Extensions
                 });
             } 
             // Cause Apparently strings are not ISerializable. Though they can be serialized.
-            else if (meta.value is string iStr)
+            else if (meta.value is string iStr && iStr != string.Empty)
             {
                 writer.AddResource(new(meta.key, iStr)
                 {

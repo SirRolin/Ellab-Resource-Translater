@@ -335,8 +335,8 @@ namespace Ellab_Resource_Translater.Translators
             // Doing this so we don't have to pass both a int ref and a Label ref
             void updateProgresText()
             {
-                Interlocked.Increment(ref currentProcessed);
-                FormUtils.LabelTextUpdater(progresText, "Preparing ", currentProcessed, " out of ", maxProcesses);
+                var progress = Interlocked.Increment(ref currentProcessed);
+                FormUtils.LabelTextUpdater(progresText, "Preparing ", progress, " out of ", maxProcesses);
             }
             updateProgresText();
 
@@ -410,11 +410,23 @@ namespace Ellab_Resource_Translater.Translators
                 // Filter to only be strings as others don't need translating
                 var toUpload = translations.Select(lang => new KeyValuePair<string, Dictionary<string, MetaData<string>>>(lang.Key, MetaData<string>.FilterTo(lang.Value)))
                                            .ToDictionary();
-                if (toUpload != null) {
-                    DataTable dataTable = CreateDataTable<string>(pathLength, resource, toUpload, systemEnum);
-                    if (dataTable.Rows.Count > 0)
-                        dth.AddInsert(dataTable);
+
+                // Get the missing string entries that hasn't been translated and add them to the datatables to upload.
+                foreach (string lang in toUpload.Keys)
+                {
+                    if (!lang.Equals("EN", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var missing = ResourceHandler.GetMissingStringEntries(translations, lang, true);
+                        foreach (var item in missing)
+                        {
+                            toUpload[lang].Add(item.key, item);
+                        }
+                    }
                 }
+
+                DataTable dataTable = CreateDataTable<string>(pathLength, resource, toUpload, systemEnum);
+                if (dataTable.Rows.Count > 0)
+                    dth.AddInsert(dataTable);
             }
         }
 
