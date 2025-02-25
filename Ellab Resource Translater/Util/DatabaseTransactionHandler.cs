@@ -80,8 +80,8 @@ namespace Ellab_Resource_Translater.Util
                 // Doing this so we don't have to pass both a int ref and a Label ref
                 void updateProgresText()
                 {
-                    Interlocked.Increment(ref currentProcessed);
-                    FormUtils.LabelTextUpdater(progresText, "Inserting ", currentProcessed, " out of ", (1 + insertToDatabaseTasks.Count + currentProcessed), " into database.");
+                    var progress = Interlocked.Increment(ref currentProcessed);
+                    FormUtils.LabelTextUpdater(progresText, "Inserting ", progress, " out of ", (insertToDatabaseTasks.Count + progress), " into database.");
                 }
                 updateProgresText();
                 ExecutionHandler.Execute(inserters, insertToDatabaseTasks.Count, (i) =>
