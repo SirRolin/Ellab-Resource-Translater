@@ -17,5 +17,10 @@ namespace Ellab_Resource_Translater.Objects
         public T value = value;
         public static implicit operator T(Ref<T> valRef) => valRef.value;
         public static implicit operator Ref<T>(T val) => new(val);
+        override
+        public string? ToString()
+        {
+            return value?.ToString();
+        }
     }
 }

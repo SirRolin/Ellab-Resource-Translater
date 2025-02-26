@@ -1,13 +1,10 @@
 ﻿using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Objects.Extensions;
 using Ellab_Resource_Translater.Util;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
-using System.Linq;
-using System.Resources;
 using System.Text.RegularExpressions;
 
 namespace Ellab_Resource_Translater.Translators
@@ -35,10 +32,18 @@ namespace Ellab_Resource_Translater.Translators
                     var c = dbc.CreateCommand();
                     c.Transaction = trans;
                     c.CommandType = CommandType.Text;
-                    // To avoid possible errors I have excluded those that have changed translations, though those should had been deleted in the previous step.
-                    // Edge Case: While updating local files someone could add a new translation to the database.
-                    c.CommandText = $@"DELETE a FROM Translation a where a.SystemEnum = {systemEnum} AND NOT a.ID in (Select ct.TranslationID from ChangedTranslation ct);";
-                    c.ExecuteNonQuery();
+
+                    ParamStringArray langs = new("@langs", config.languagesToTranslate, "EN");
+
+                    c.CommandText = $@"
+                            DELETE a FROM Translation a 
+                            WHERE a.SystemEnum = {systemEnum} 
+                            AND a.LanguageCode IN ({langs}) 
+                            AND NOT a.ID in (Select ct.TranslationID from ChangedTranslation ct);";
+                    // Add langs to the parameters so that we don't delete the once we're not working on.
+                    langs.AddParam(c);
+
+                    var rowsAffected = c.ExecuteNonQuery();
                     c.Dispose();
 
                     // Read, Translate, Write & prepare dth.
@@ -99,7 +104,9 @@ namespace Ellab_Resource_Translater.Translators
         /// <param name="progresText">The Label that is updated with the progres</param>
         /// <exception cref="NotImplementedException"></exception>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0306:Simplify collection initialization", Justification = "it's a lie, collection initialization doesn't work for ConcurrentQueues")]
-        private void UpdateLocalFiles(string path, ListView view, Label progresText)
+        private void UpdateLocalFiles(string path,
+                                      ListView view,
+                                      Label progresText)
         {
             // Update UI
             FormUtils.LabelTextUpdater(progresText, "Fetching changed translations from DB.");
@@ -110,6 +117,8 @@ namespace Ellab_Resource_Translater.Translators
 
                 // Read from the DB
                 using DbCommand command = dce.CreateCommand();
+
+                /*// Only changes from changedTranslations
                 command.CommandText = $@"WITH changedTranslationsLatest AS (
                                           SELECT
                                             *,
@@ -117,7 +126,32 @@ namespace Ellab_Resource_Translater.Translators
                                           FROM ChangedTranslation
                                         )
                                         SELECT a.""Key"", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as ""ChangedID""
-                                        FROM Translation a JOIN changedTranslationsLatest b ON a.ID = b.TranslationID WHERE b.ReverseRowNumber = 1 and a.SystemEnum = {systemEnum};";
+                                        FROM Translation a JOIN changedTranslationsLatest b ON a.ID = b.TranslationID WHERE b.ReverseRowNumber = 1 and a.SystemEnum = {systemEnum} and a.LanguageCode in ({});";
+                //*/
+
+                // Creating a object to easier apply the parameters to the command.
+                ParamStringArray langs = new("@lang", config.languagesToTranslate, "EN");
+
+                // Fetch all entries on the database that's not empty, prioritising the changedTranslations and is the right languages
+                command.CommandText = $@"
+                        WITH changedTranslationsLatest AS (
+                            SELECT
+                            *,
+                            ROW_NUMBER() OVER(PARTITION BY TranslationID ORDER BY ID DESC) AS ReverseRowNumber
+                            FROM ChangedTranslation
+                        )
+
+                        SELECT a.""Key"", a.ResourceName, a.LanguageCode, a.Comment, COALESCE(b.ChangedText, a.""Text"") AS ""ChangedText"", ISNULL(b.ID, -1) AS ""ChangedID""
+                        FROM Translation a 
+                        left JOIN changedTranslationsLatest b 
+                        ON a.ID = b.TranslationID 
+                        WHERE (b.ReverseRowNumber = 1 OR b.ID IS NULL)
+                        AND COALESCE(b.ChangedText, a.""Text"") != '' 
+                        AND a.SystemEnum = {systemEnum} 
+                        AND a.LanguageCode IN ({langs});";
+                // add languages to the parameters
+                langs.AddParam(command);
+
                 
                 dce.WaitForOpen(() =>
                 {
@@ -165,8 +199,17 @@ namespace Ellab_Resource_Translater.Translators
 
                     // Process Changes by the ResourceFile
                     UpdateLocalFilesFromGroupedData(maxThreads, path, view, changesToRegister, files, myUpdate);
+
                     using DbCommand deleteCommand = dce.CreateCommand();
-                    deleteCommand.CommandText = $@"DELETE FROM ChangedTranslation WHERE ChangedTranslation.TranslationID in (SELECT ID FROM Translation where SystemEnum = {systemEnum});";
+                    deleteCommand.CommandText = $@"
+                            DELETE FROM ChangedTranslation
+                            WHERE ChangedTranslation.TranslationID IN (
+                                    SELECT ID FROM Translation 
+                                    WHERE SystemEnum = {systemEnum} 
+                                    AND LanguageCode IN ({langs})
+                            );";
+                    langs.AddParam(deleteCommand);
+
                     dce.WaitForOpen(() =>
                     {
                         source.Cancel();
@@ -179,7 +222,7 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private void UpdateLocalFilesFromGroupedData(int maxThreads,
+        private static void UpdateLocalFilesFromGroupedData(int maxThreads,
                                                             string path,
                                                             ListView view,
                                                             ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
@@ -196,10 +239,10 @@ namespace Ellab_Resource_Translater.Translators
             {
                 
                 var resourcePath = string.Concat(rootPath, rootPath.EndsWith(Path.DirectorySeparatorChar) ? "" : Path.DirectorySeparatorChar, transDictKey);
-                if(!changesToRegister[transDictKey][0].language.Equals("en", StringComparison.CurrentCultureIgnoreCase))
+                /*if(!changesToRegister[transDictKey][0].language.Equals("en", StringComparison.CurrentCultureIgnoreCase))
                 {
                     resourcePath = Path.ChangeExtension(resourcePath, langToLocal(changesToRegister[transDictKey][0].language) + ".resx");
-                }
+                }*/
 
                 // Load Local data so we don't lose data that wasn't overriden
                 var translations = ResourceHandler.ReadResource<object?>(resourcePath);

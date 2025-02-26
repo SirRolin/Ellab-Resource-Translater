@@ -25,7 +25,7 @@ namespace Ellab_Resource_Translater.Translators
                 view,
                 progresText,
                 // \\(dottxt20|popup20|ReportTxtstr)\\ means that it has to be in a folder that's either dottxt20, popup20 or ReportTxtstr.
-                new($@".*\\({folderStr})\\.*(?<!\..{{0,5}})\.resx"));
+                new($@".*\\({folderStr})\\.*(?<!\.[\w-]*)\.resx"));
         }
     }
 }

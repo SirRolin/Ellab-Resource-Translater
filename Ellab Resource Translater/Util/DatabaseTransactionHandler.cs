@@ -36,6 +36,7 @@ namespace Ellab_Resource_Translater.Util
         private readonly CancellationToken token = source.Token;
         private int insertsPending = 0;
         private bool _waitTillStopped = false;
+        private readonly object LockObject = new();
 
         /// <summary>
         /// Threadsafely inserts the table <paramref name="dt"/> to the internal queue.<br/>
@@ -76,7 +77,7 @@ namespace Ellab_Resource_Translater.Util
             {
                 onTransactionStart.Invoke(dce, transAct);
                 int currentProcessed = -1;
-                //int maxProcesses = insertToDatabaseTasks.Count;
+                // int maxProcesses = insertToDatabaseTasks.Count;
                 // Doing this so we don't have to pass both a int ref and a Label ref
                 void updateProgresText()
                 {
@@ -153,51 +154,44 @@ namespace Ellab_Resource_Translater.Util
             // Upload to the Database
             if (DBCon.CanCreateBatch)
             {
-                /// Must not use using - This is due to trying to execute while preparing the next batch command.
-                var s = DBCon.CreateBatch();
-                if(trans != null)
-                    s.Transaction = trans;
 
-                foreach (DataRow row in dataTable.Rows)
+                // Since ValSuite has tousands of entries in some files, I have limited it to ROWS_AT_ONCE at a time to not trigger the timeout.
+                const int ROWS_AT_ONCE = 500;
+                for (int rowIte = 0; rowIte < dataTable.Rows.Count; rowIte += ROWS_AT_ONCE)
                 {
-                    var c = s.CreateBatchCommand();
-                    c.CommandText = commandText;
-                    addParameters(row, (DBBatchCommandWrapper) c);
-                    s.BatchCommands.Add(c);
+                    /// Must not use using - This is due to trying to execute while preparing the next batch command.
+                    var s = DBCon.CreateBatch();
+                    if (trans != null)
+                        s.Transaction = trans;
 
-                    // Report Progress
-                    Interlocked.Increment(ref i);
-                    update(i, dataTable.Rows.Count);
+                    for (int innerRowIte = rowIte; innerRowIte < (rowIte + ROWS_AT_ONCE) && innerRowIte < dataTable.Rows.Count; innerRowIte++)
+                    {
+                        DataRow row = dataTable.Rows[innerRowIte];
+                        var c = s.CreateBatchCommand();
+                        c.CommandText = commandText;
+                        addParameters(row, (DBBatchCommandWrapper)c);
+                        s.BatchCommands.Add(c);
 
-                    token.ThrowIfCancellationRequested();
-                }
+                        // Report Progress
+                        Interlocked.Increment(ref i);
+                        update(i, dataTable.Rows.Count);
 
-                // Sometimes there's nothing to upload
-                if (s.BatchCommands.Count > 0)
-                {
+                        token.ThrowIfCancellationRequested();
+                    }
                     PreviousTask.Wait();
                     if (!token.IsCancellationRequested)
                     {
                         PreviousTask = Task.Run(() =>
                         {
-                            try
-                            {
-                                s.ExecuteNonQuery();
-
-                                // Manually Disposing of it instead of using, well... using, cause otherwise it gets disposed off before it gets to execute.
-                                s.Dispose();
-                            }
-                            catch (Exception)
-                            {
-                                batchFailed = true;
-                            }
+                            Exe(ref batchFailed, s);
                         });
                     }
+                    if (batchFailed)
+                    {
+                        break;
+                    }
                 }
-                else
-                {
-                    s.Cancel();
-                }
+                PreviousTask.Wait();
             }
             else
             {
@@ -205,18 +199,23 @@ namespace Ellab_Resource_Translater.Util
             }
             if (batchFailed)
             {
+                i = 0;
+                Ref<int> refI = new(i);
                 PreviousTask = Task.CompletedTask;
-                using DbCommand command = DBCon.CreateCommand();
-                command.CommandText = commandText;
-                if (trans != null)
-                    command.Transaction = trans;
-
-                DBCommandWrapper wrappedCommand = command;
                 foreach (DataRow row in dataTable.Rows)
                 {
+                    DbCommand command = DBCon.CreateCommand();
+                    command.CommandText = commandText;
+
+                    if (trans != null)
+                        command.Transaction = trans;
+
+                    DBCommandWrapper wrappedCommand = command;
+
                     addParameters(row, wrappedCommand);
 
                     // We run it Asyncroniously so that we can prepare the next Task before we run it.
+                    // Otherwise the execute will tell us "ExecuteNonQuery Requires an open and available connection, connection is open".
                     PreviousTask.Wait();
 
                     // Check if user wants to cancel
@@ -227,8 +226,8 @@ namespace Ellab_Resource_Translater.Util
                         DBCon.WaitForOpen();
                         CommandExecuteElseMessage(dataTable, DBCon, command);
 
-                        Interlocked.Increment(ref i);
-                        update(i, dataTable.Rows.Count);
+                        var ii = Interlocked.Increment(ref i);
+                        update(ii, dataTable.Rows.Count);
                     });
                 }
             }
@@ -237,9 +236,31 @@ namespace Ellab_Resource_Translater.Util
             PreviousTask.Wait();
         }
 
+        private void Exe(ref bool batchFailed, DbBatch s)
+        {
+            try
+            {
+                lock (this.LockObject)
+                {
+                    s.ExecuteNonQuery();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.WriteLine(e.Message);
+                batchFailed = true;
+            }
+            finally
+            {
+                // Manually Disposing of it instead of using, well... using, cause otherwise it gets disposed off before it gets to execute.
+                s.Dispose();
+            }
+        }
+
         private void CommandExecuteElseMessage(DataTable dataTable, DbConnection dce, DbCommand command)
         {
             int tries = 0;
+            Exception? e = null;
             while (tries < 2)
             {
                 try
@@ -249,15 +270,16 @@ namespace Ellab_Resource_Translater.Util
                     command.ExecuteNonQuery();
                     break;
                 }
-                catch
+                catch(Exception ee)
                 {
+                    e = ee;
                     tries++;
                     Task.Delay(Config.Get().checkDelay * 5).Wait();
                 }
                 if (tries == 2)
                 {
                     Cancel();
-                    MessageBox.Show("failed to upload to the database:" + dataTable.ToString());
+                    MessageBox.Show("failed to upload to the database:" + e.Message);
                 }
             }
         }

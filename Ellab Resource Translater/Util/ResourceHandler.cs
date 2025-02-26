@@ -95,23 +95,6 @@ namespace Ellab_Resource_Translater.Util
                     translations.Add(lang, []);
                 else
                     translations.Add(lang, ResourceHandler.ReadResource<object?>(langPath));
-
-                // Add all missing translations
-                /*foreach (string entry in translations["EN"].Keys)
-                {
-                    if (!translations[lang].TryGetValue(entry, out MetaData<object?>? trans) || (trans.value is string strVal && string.IsNullOrEmpty(strVal)))
-                    {
-                        var value = aiTrans ? string.Empty : translations["EN"][entry].value;
-                        var comment = translations["EN"][entry].comment;
-
-                        // In Case of only the value is empty
-                        translations[lang].Remove(entry);
-
-                        // Add it to the Languages Dictionary
-                        trans = new MetaData<object?>(entry, value, comment);
-                        translations[lang].Add(entry, trans);
-                    }
-                }*/
             }
 
             return translations;
@@ -193,10 +176,10 @@ namespace Ellab_Resource_Translater.Util
                             transItem.value = text;
                             transItem.comment = String.Join("\n", transItem.comment, "#AI");
                         }
-                        else if (translations["EN"][itemST].value is string englishValue) // Shouldn't ever be false, but if it is, we avoid the error.
+                        else if (translations["EN"][itemST].comment is string englishComment) // Shouldn't ever be false, but if it is, we avoid the error.
                         {
-                            transItem.value = englishValue;
-                            transItem.comment = String.Join("\n", transItem.comment, "Attempted Ai Translation Failed.");
+                            transItem.value = string.Empty;
+                            transItem.comment = String.Join("\n", transItem.comment, englishComment);
                         }
 
                         translations[lang].Add(transItem.key, new MetaData<object?>(transItem.key, transItem.value, transItem.comment));
