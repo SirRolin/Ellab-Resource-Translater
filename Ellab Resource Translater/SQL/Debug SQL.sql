@@ -4,7 +4,7 @@
 
 
 -- See Valsuite entries 
-select a.* from Translation a where a.SystemEnum = 0 and a.LanguageCode = 'EN';
+ select a.* from Translation a where a.SystemEnum = 0 and a."Key" = '$this.Text' and a.ResourceName = 'dottxt20\LanDotTxtForm.resx';
 
 
 -- DELETE a FROm Translation a where (a."Key" LIKE '%.Font') or ISNUMERIC(a.Text) = 1;
@@ -51,12 +51,24 @@ WHERE row_number <> 1;
 
 -- This is what the program sees when fetching changes
 /*
-WITH changedTrnaslationsLatest AS (
+WITH changedTranslationsLatest AS (
   SELECT
     *,
     ROW_NUMBER() OVER(PARTITION BY TranslationID ORDER BY ID DESC) AS ReverseRowNumber
   FROM ChangedTranslation
 )
-SELECT a."Key", a.ResourceName, a.LanguageCode, a.Comment, b.ChangedText, b.ID as "ChangedID"
-FROM Translation a JOIN changedTrnaslationsLatest b ON a.ID = b.TranslationID WHERE b.ReverseRowNumber = 1 and a.SystemEnum = 1;
+
+SELECT a."Key", a.ResourceName, a.LanguageCode, a.Comment, COALESCE(b.ChangedText, a."Text") AS "ChangedText", ISNULL(b.ID, -1) AS "ChangedID", a.ID
+FROM Translation a left JOIN changedTranslationsLatest b 
+ON a.ID = b.TranslationID 
+WHERE (b.ReverseRowNumber = 1 or b.ID IS NULL) 
+--AND COALESCE(b.ChangedText, a."Text") != '' 
+AND a.SystemEnum = 0
+AND a.LanguageCode in ('EN', 'DE')
+
+and a."Key" = '$this.Text'
 --*/
+
+
+
+-- SELECT a.* from Translation a JOIN (SELECT * from Translation where LanguageCode = 'EN' and SystemEnum = 1) b on a.ResourceName = b.ResourceName and a.Text = b.Text and a."Key" = b."Key" where a.LanguageCode <> 'EN' and a.SystemEnum = 1;
