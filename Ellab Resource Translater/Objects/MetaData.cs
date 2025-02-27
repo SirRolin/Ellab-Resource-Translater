@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Ellab_Resource_Translater.Objects
 {
-    public class MetaData<Type>(string key, Type value, string comment, string language = "EN")
+    public class MetaData<Type>(string key, Type value, string comment, string language = "")
     {
         public string key = key;
         public Type value = value;
