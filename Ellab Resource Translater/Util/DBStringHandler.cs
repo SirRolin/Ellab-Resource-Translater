@@ -24,7 +24,7 @@ namespace Ellab_Resource_Translater.Util
         /// <exception cref="InvalidOperationException"></exception>
         public static DbConnection CreateDbConnection(string connectionString)
         {
-            DbConnection output =  DetectType(connectionString) switch {
+            DbConnection output = DetectType(connectionString) switch {
                 ConnType.MySql or ConnType.MSSqlIS => new MySqlConnection(connectionString),
                 ConnType.MSSql => new SqlConnection(connectionString),
                 ConnType.PostgreSql => new NpgsqlConnection(connectionString),

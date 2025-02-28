@@ -1,4 +1,5 @@
 using Azure;
+using Azure.AI.Translation.Text;
 using Ellab_Resource_Translater.Forms;
 using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Translators;
@@ -79,7 +80,7 @@ namespace Ellab_Resource_Translater
 
                 string? connString = SecretManager.GetUserSecret(CONNECTION_SECRET);
 
-                if (connString != null)
+                if (connString == null)
                 {
                     connString = DatabaseSelecterForm.DEFAULTSERVERSTRING;
                     SecretManager.SetUserSecret(CONNECTION_SECRET, connString);
@@ -105,14 +106,30 @@ namespace Ellab_Resource_Translater
                             UpdateConnectionStatus(CAN_CONNECT);
                         }
                         await conn.CloseAsync();
+                        return;
                     }
                     catch (Exception ex)
                     {
+                        // In case we try connect to a new connection while still trying to connect.
+                        if (ex is TaskCanceledException)
+                            return;
+
                         UpdateConnectionStatus(ex.Message);
-                        RefreshConnectionButton.Invoke(() => RefreshConnectionButton.Enabled = true);
-                        return;
+                        connProv?.Dispose();
+
+                        // If we can't connect (MSSQL, MYSQL and PostGres)
+                        if (ex.InnerException?.Message == "No such host is known.")
+                        {
+                            using var _ = Task.Run(() =>
+                            {
+                                var answer = GetBlockingInput("Couldn't Connect, do you want to open Database Selecter?", "Couldn't Connect", MessageBoxButtons.YesNo);
+                                if (answer.HasFlag(DialogResult.Yes))
+                                {
+                                    this.Invoke(() => OpenDBSetup());
+                                }
+                            });
+                        }
                     }
-                    return;
                 }
                 else
                 {
@@ -470,7 +487,7 @@ namespace Ellab_Resource_Translater
             }
 
             // Return if it can connect.
-            return connectionStatus.Text.Equals("DB " + CAN_CONNECT);
+            return connProv?.isDisposed() ?? false && connectionStatus.Text.Equals("DB " + CAN_CONNECT);
         }
     }
 }

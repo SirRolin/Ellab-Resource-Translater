@@ -16,10 +16,21 @@ namespace Ellab_Resource_Translater.Util
     /// This is Thread-safe.
     /// </remarks>
     /// <param name="connectionString">a string supported by <see cref="DBStringHandler.CreateDbConnection(string)"/>, Types can be seen in <see cref="Enums.ConnType"/></param>
-    public class ConnectionProvider(string connectionString) : IDisposable
+    public class ConnectionProvider : IDisposable
     {
         private readonly List<DbConnection> dces = [];
         private readonly object lockObject = new();
+        private bool _isDisposed = false;
+        private string connectionString;
+
+        public ConnectionProvider()
+        {
+            _isDisposed = true;
+            connectionString = "";
+        }
+        public ConnectionProvider(string connectionString) => this.connectionString = connectionString;
+
+
 
         /// <summary>
         /// Disposes of all connections this has provided.
@@ -29,6 +40,8 @@ namespace Ellab_Resource_Translater.Util
         /// </remarks>
         public void Dispose()
         {
+            _isDisposed = true;
+            connectionString = "";
             lock (this.lockObject)
             {
                 // Get rid of all active connections
@@ -38,6 +51,8 @@ namespace Ellab_Resource_Translater.Util
                 }
             }
         }
+
+        public bool isDisposed() => _isDisposed;
 
         public DbConnection Get()
         {

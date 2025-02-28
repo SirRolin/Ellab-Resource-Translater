@@ -104,7 +104,7 @@ namespace Ellab_Resource_Translater.Forms
                 mainFormParent.TryConnectDB();
                 this.Close();
             } 
-            else if(connectionString != "")
+            else
             {
                 // For the future, to give a message for debugging.
                 MessageBox.Show("Either the string is wrong or the DBStringHandler is not picking the string up correctly.");
@@ -133,14 +133,14 @@ namespace Ellab_Resource_Translater.Forms
 
         private void MySqlIsCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            MySqlUserIDText.Enabled = MySqlISCheckBox.Checked;
-            MySqlPasswordText.Enabled = MySqlISCheckBox.Checked;
+            MySqlUserIDText.Enabled = !MySqlISCheckBox.Checked;
+            MySqlPasswordText.Enabled = !MySqlISCheckBox.Checked;
         }
 
         private void MSSQLISCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            MSSqlUserIDText.Enabled = MSSqlISCheckBox.Checked;
-            MSSqlPasswordText.Enabled = MSSqlISCheckBox.Checked;
+            MSSqlUserIDText.Enabled = !MSSqlISCheckBox.Checked;
+            MSSqlPasswordText.Enabled = !MSSqlISCheckBox.Checked;
         }
 
         private void ResetToHardcoded_Click(object sender, EventArgs e)

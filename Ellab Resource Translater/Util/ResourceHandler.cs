@@ -78,6 +78,7 @@ namespace Ellab_Resource_Translater.Util
         /// <param name="existing">a HashSet of all the resource files considered "existing" in the root folder.</param>
         /// <param name="resource">Full Path to the english resource.</param>
         /// <param name="langs">Languagues other than english to also read and prepare.<br/>Upper Case national short form. ex: "EN", "DE", "ZH".</param>
+        /// <param name="GetLangStr">Gets the file surfix from language to check for language files.</param>
         /// <param name="langsToAi">if the entry doesn't exist or is empty, and language doesn't exist in this array, it'll fill in the english entry for it.</param>
         /// <returns>Level 1 Key is the language, level 2 Key is the Entries Key.</returns>
         public static Dictionary<string, Dictionary<string, MetaData<object?>>> GetAllLangResources(Dictionary<string, string> existing, string resource, Func<string, string> GetLangStr, string[] langs)
