@@ -18,6 +18,10 @@ namespace Ellab_Resource_Translater
         internal const string AZURE_SECRET = "EllabResourceTranslator:azure";
         private CancellationTokenSource? cancelTSource;
 
+        private const string IS_CONNECTING = "Connecting...";
+        private const string CAN_CONNECT = "Can Connect";
+        private const string DB_CONN_DEFAULT = "Database Connection Status";
+
 
         public MainForm()
         {
@@ -75,6 +79,14 @@ namespace Ellab_Resource_Translater
 
                 string? connString = SecretManager.GetUserSecret(CONNECTION_SECRET);
 
+                if (connString != null)
+                {
+                    connString = DatabaseSelecterForm.DEFAULTSERVERSTRING;
+                    SecretManager.SetUserSecret(CONNECTION_SECRET, connString);
+                }
+                    
+
+
                 // Debugging
                 //RefreshConnectionButton.Invoke(() => MessageBox.Show(this, dbConn.Replace(";", ";\n")));
 
@@ -82,7 +94,7 @@ namespace Ellab_Resource_Translater
                 if (connString != null)
                 {
                     connProv = new(connString);
-                    UpdateConnectionStatus("Test...");
+                    UpdateConnectionStatus(IS_CONNECTING);
                     
                     try
                     {
@@ -90,7 +102,7 @@ namespace Ellab_Resource_Translater
                         await conn.OpenAsync();
                         if (conn.State == System.Data.ConnectionState.Open)
                         {
-                            UpdateConnectionStatus("Can Connect");
+                            UpdateConnectionStatus(CAN_CONNECT);
                         }
                         await conn.CloseAsync();
                     }
@@ -210,7 +222,7 @@ namespace Ellab_Resource_Translater
             var config = Config.Get();
             var languagePairs = Config.DefaultLanguages();
 
-            FormUtils.SaveCheckBoxListLocalised(
+            FormUtils.SaveCheckBoxListChangeLocalised(
                 list: config.languagesToTranslate,
                 checkedListBox: translationCheckedListBox,
                 localiser: languagePairs);
@@ -253,6 +265,11 @@ namespace Ellab_Resource_Translater
         {
             progressTitle.Invoke(() => progressTitle.Text = "Val Suite");
             var config = Config.Get();
+            if (!WaitWhileDBConnecting())
+            {
+                ShowBlockingOkMessage("DB Connection Failed, try again later", "DB Connection Failed");
+                return;
+            }
             if (config.ValPath != null && config.ValPath != "" && !source.IsCancellationRequested)
             {
                 try
@@ -342,6 +359,12 @@ namespace Ellab_Resource_Translater
         {
             progressTitle.Invoke(() => progressTitle.Text = "EM Suite");
             var config = Config.Get();
+            if (!WaitWhileDBConnecting())
+            {
+                ShowBlockingOkMessage("DB Connection Failed, try again later", "DB Connection Failed");
+                return;
+            }
+
             if (config.EMPath != null && config.EMPath != "" && !source.IsCancellationRequested)
             {
                 try
@@ -429,6 +452,25 @@ namespace Ellab_Resource_Translater
         private void CancellationButton_Click(object sender, EventArgs e)
         {
             cancelTSource?.Cancel();
+        }
+
+        private bool WaitWhileDBConnecting()
+        {
+            // if it can't connect or isn't trying, try.
+            if (!new[]{ "DB " + CAN_CONNECT, "DB " + IS_CONNECTING, DB_CONN_DEFAULT }.Contains(connectionStatus.Text))
+            {
+                TryConnectDB();
+            }
+
+            int delay = Config.Get().checkDelay;
+            // Wait for the DB to no longer be connecting
+            while (new[] {"DB " + IS_CONNECTING, DB_CONN_DEFAULT }.Contains(connectionStatus.Text))
+            {
+                Task.Delay(delay).Wait();
+            }
+
+            // Return if it can connect.
+            return connectionStatus.Text.Equals("DB " + CAN_CONNECT);
         }
     }
 }

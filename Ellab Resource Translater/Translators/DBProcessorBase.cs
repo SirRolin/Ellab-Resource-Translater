@@ -179,7 +179,7 @@ namespace Ellab_Resource_Translater.Translators
                     void myUpdate(string pretext, Ref<int> currentProgress, int maxProgresses)
                     {
                         Interlocked.Increment(ref currentProgress.value);
-                        FormUtils.LabelTextUpdater(progresText, pretext, currentProgress, " out of ", maxProgresses);
+                        FormUtils.LabelTextUpdater(progresText, pretext, currentProgress.value, " out of ", maxProgresses);
                     }
 
                     // Merging the Tables with column data so we can fetch it later.
@@ -197,8 +197,11 @@ namespace Ellab_Resource_Translater.Translators
                     // ConcurrentDictionary can't be popped, so we have to have a queue of it's keys
                     ConcurrentQueue<string> files = new(changesToRegister.Keys);
 
+
+                    Dictionary<string, string> allResources = getAllResourcePaths(path);
+
                     // Process Changes by the ResourceFile
-                    UpdateLocalFilesFromGroupedData(maxThreads, path, view, changesToRegister, files, myUpdate);
+                    UpdateLocalFilesFromGroupedData(maxThreads, path, view, allResources, changesToRegister, files, myUpdate);
 
                     using DbCommand deleteCommand = dce.CreateCommand();
                     deleteCommand.CommandText = $@"
@@ -225,6 +228,7 @@ namespace Ellab_Resource_Translater.Translators
         private static void UpdateLocalFilesFromGroupedData(int maxThreads,
                                                             string path,
                                                             ListView view,
+                                                            Dictionary<string, string> allResources,
                                                             ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
                                                             ConcurrentQueue<string> files,
                                                             Action<string, Ref<int>, int> myUpdate)
@@ -238,14 +242,14 @@ namespace Ellab_Resource_Translater.Translators
             void processChanges(string rootPath, string transDictKey)
             {
                 
-                var resourcePath = string.Concat(rootPath, rootPath.EndsWith(Path.DirectorySeparatorChar) ? "" : Path.DirectorySeparatorChar, transDictKey);
-                /*if(!changesToRegister[transDictKey][0].language.Equals("en", StringComparison.CurrentCultureIgnoreCase))
-                {
-                    resourcePath = Path.ChangeExtension(resourcePath, langToLocal(changesToRegister[transDictKey][0].language) + ".resx");
-                }*/
+                var resourcePath = Path.Combine(rootPath, transDictKey);
+
+                // In Case the english and language files are not the same casing
+                if (allResources.TryGetValue(resourcePath.ToLowerInvariant(), out string? truePath))
+                    resourcePath = truePath;
 
                 // Load Local data so we don't lose data that wasn't overriden
-                var translations = ResourceHandler.ReadResource<object?>(resourcePath);
+                Dictionary<string, MetaData<object?>> translations = ResourceHandler.ReadResource<object?>(resourcePath);
 
                 // Override in Memory
                 var changes = changesToRegister[transDictKey];
@@ -269,11 +273,10 @@ namespace Ellab_Resource_Translater.Translators
                 while (files.TryDequeue(out var resourceName))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        update: () => myUpdate(TITLE, currentProgress, fileCount),
+                        onDone: () => myUpdate(TITLE, currentProgress, fileCount),
                         listView: view,
-                        resourceName: i + ") Fetching Data...",
+                        processName: i + ") Fetching Data...",
                         process: () => processChanges(path, resourceName));
-                    Interlocked.Increment(ref currentProgress);
                 }
             });
         }
@@ -285,7 +288,7 @@ namespace Ellab_Resource_Translater.Translators
                                                                   ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
                                                                   Action<string, Ref<int>, int> myUpdate)
         {
-            int currentProgress = 0;
+            Ref<int> currentProgress = 0;
             int rowCount = dataRows.Count;
             const string TITLE = "Grouping Data on same Resource Files: ";
 
@@ -315,11 +318,10 @@ namespace Ellab_Resource_Translater.Translators
                 while (dataRows.TryDequeue(out var rowData))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        update: () => myUpdate(TITLE, currentProgress, rowCount),
+                        onDone: () => myUpdate(TITLE, currentProgress, rowCount),
                         listView: view,
-                        resourceName: threadNum + ") Fetching Data...",
+                        processName: threadNum + ") Fetching Data...",
                         process: () => processRow(rowData.row, rowData.dataTNum));
-                    Interlocked.Increment(ref currentProgress);
                 }
             });
         }
@@ -350,6 +352,7 @@ namespace Ellab_Resource_Translater.Translators
                     foreach (DataRow row in dt.Rows)
                     {
                         dataRows.Enqueue((currentProgress, row));
+                        myUpdate(TITLE, currentProgress, tableCount);
                     }
                 }
             }
@@ -358,9 +361,9 @@ namespace Ellab_Resource_Translater.Translators
                 while (dataTables.TryDequeue(out DataTable? table))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        update: () => myUpdate(TITLE, currentProgress, tableCount),
+                        onDone: () => myUpdate(TITLE, currentProgress, tableCount),
                         listView: view,
-                        resourceName: threadNum + ") Fetching Data...",
+                        processName: threadNum + ") Fetching Data...",
                         process: () => processTable(table));
                 }
             });
@@ -370,8 +373,8 @@ namespace Ellab_Resource_Translater.Translators
         {
             // Tracks resources done - Starts at -1 so that we can call it to get the right format to start with.
             int currentProcessed = -1;
-            var allResources = Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories).ToHashSet();
-            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Where(x => regex.IsMatch(x)));
+            Dictionary<string, string> allResources = getAllResourcePaths(path);
+            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Select(x => x.Value).Where(x => regex.IsMatch(x)));
 
             int maxProcesses = englishQueuedFiles.Count;
 
@@ -404,7 +407,12 @@ namespace Ellab_Resource_Translater.Translators
                 );
         }
 
-        private void ProcessQueue(int rootPathLength, ConcurrentQueue<string> queue, HashSet<string> existingResources, Action update, ListView listView)
+        private static Dictionary<string, string> getAllResourcePaths(string path)
+        {
+            return Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories).Select(truePath => new KeyValuePair<string, string>(truePath.ToLowerInvariant(), truePath)).ToDictionary();
+        }
+
+        private void ProcessQueue(int rootPathLength, ConcurrentQueue<string> queue, Dictionary<string, string> existingResources, Action update, ListView listView)
         {
             while (!source.IsCancellationRequested && queue.TryDequeue(out var resource))
             {
@@ -428,11 +436,11 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private void TranslateResource(HashSet<string> existingFiles, string resource, int pathLength)
+        private void TranslateResource(Dictionary<string, string> existingFiles, string resource, int pathLength)
         {
             // Translations work
             var langs = config.languagesToTranslate.ToArray();
-            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = ResourceHandler.GetAllLangResources(existingFiles, resource, langs, Config.Get().languagesToAiTranslate, TranslationService);
+            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = ResourceHandler.GetAllLangResources(existingFiles, resource, langToLocal, langs, Config.Get().languagesToAiTranslate, TranslationService);
 
             // Save Translations
             foreach (var item in translations)
@@ -488,7 +496,7 @@ namespace Ellab_Resource_Translater.Translators
             {
                 string language = item.Key;
                 // add language string (if not english), then cut rootPath away.
-                //string resourceName = (item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{item.Key.ToLower()}.resx"))[(pathLength + 1)..];
+                //string resourceName = (item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase) ? resource : Path.ChangeExtension(resource, $".{langToLocal(item.Key)}.resx"))[(pathLength + 1)..];
                 // Changed due to the WebTranslator comparing on resourceName
                 string resourceName = resource[(pathLength + 1)..];
 
@@ -500,6 +508,7 @@ namespace Ellab_Resource_Translater.Translators
                     string comment = value.Value.comment;
                     string key = value.Key;
                     object text = value.Value.value; // Stonks
+                    bool IsTranlateInValSuite = !string.IsNullOrEmpty(text.ToString());
 
                     dataTable.Rows.Add(null, // ID, should autogenerate
                                         comment,
@@ -507,7 +516,7 @@ namespace Ellab_Resource_Translater.Translators
                                         language,
                                         resourceName,
                                         text,
-                                        false,
+                                        IsTranlateInValSuite,
                                         systemEnum
                                         );
                 }

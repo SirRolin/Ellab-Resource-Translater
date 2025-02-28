@@ -18,12 +18,14 @@ namespace Ellab_Resource_Translater.Util
         {
             try
             {
-                if (threads > 0)
+                if (threads > 1)
                 {
                     List<Task> tasks = [];
                     for (var i = 0; i < threads; i++)
                     {
-                        tasks.Add(Task.Run(() => action(i), token));
+                        // localising it so it doesn't take the highest current threads instead of the thread index.
+                        var localI = i;
+                        tasks.Add(Task.Run(() => action(localI), token));
                     }
                     Task.WhenAll(tasks).Wait(token);
                 }
@@ -42,7 +44,7 @@ namespace Ellab_Resource_Translater.Util
         /// X being the lower of <paramref name="threads"/> and <paramref name="predictedProcesses"/>.<br/>
         /// if any throws an exception of the same type as <paramref name="onFailing"/>
         /// </summary>
-        /// <param name="action">integer is Thread number, -1 if in main Thread</param>
+        /// <param name="action">integer is Thread number, -1 if in main (Executing) Thread</param>
         public static void TryExecute<T>(int threads, int predictedProcesses, Action<int> action, Action<T> onFailing, CancellationToken token) where T : Exception
         {
             TryExecute(Math.Min(threads, predictedProcesses), action, onFailing, token);
@@ -77,12 +79,14 @@ namespace Ellab_Resource_Translater.Util
         /// <param name="action">integer is Thread number, -1 if in main Thread</param>
         public static void Execute(int threads, Action<int> action)
         {
-            if (threads > 0)
+            if (threads > 1)
             {
                 Task[] tasks = new Task[threads];
                 for (var i = 0; i < threads; i++)
                 {
-                    tasks[i] = (Task.Run(() => action(i)));
+                    // localising it so it doesn't take the highest current threads instead of the thread index.
+                    var localI = i;
+                    tasks[localI] = (Task.Run(() => action(localI)));
                 }
                 Task.WhenAll(tasks).Wait();
             } else

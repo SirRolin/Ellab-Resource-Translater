@@ -199,8 +199,7 @@ namespace Ellab_Resource_Translater.Util
             }
             if (batchFailed)
             {
-                i = 0;
-                Ref<int> refI = new(i);
+                Ref<int> refI = new(0);
                 PreviousTask = Task.CompletedTask;
                 foreach (DataRow row in dataTable.Rows)
                 {
@@ -247,7 +246,9 @@ namespace Ellab_Resource_Translater.Util
             }
             catch (Exception e)
             {
-                Debug.WriteLine(e.Message);
+                // If Cancelled we know why the error happened.
+                if(!source.IsCancellationRequested)
+                    Debug.WriteLine(e.Message);
                 batchFailed = true;
             }
             finally

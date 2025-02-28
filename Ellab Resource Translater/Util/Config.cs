@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Ellab_Resource_Translater.Objects;
+using Newtonsoft.Json;
 using System.Data;
 using System.Diagnostics;
 
@@ -32,16 +33,16 @@ namespace Ellab_Resource_Translater.Util
         ];
 
         // Local Variables (The once being saved)
-        public string EMPath = "";
-        public string ValPath = "";
-        public List<string> languagesToTranslate = [];
-        public List<string> languagesToAiTranslate = [];
-        public int threadsToUse = 32;
-        public int insertersToUse = 4;
+        public Ref<string> EMPath = "";
+        public Ref<string> ValPath = "";
+        public Ref<int> threadsToUse = 32;
+        public Ref<int> insertersToUse = 4;
+        public Ref<bool> closeOnceDone = false;
+        public Ref<int> checkDelay = 100;
         public Size MainWindowSize = new(900, 650);
         public Size SettingWindowSize = new(600, 400);
-        public bool closeOnceDone = false;
-        public int checkDelay = 100;
+        public List<string> languagesToTranslate = [];
+        public List<string> languagesToAiTranslate = [];
 
         // Singleton instanciation accessed with Get()
         private static Config? instance;

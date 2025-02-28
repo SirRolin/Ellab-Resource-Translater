@@ -80,7 +80,7 @@ namespace Ellab_Resource_Translater.Util
         /// <param name="langs">Languagues other than english to also read and prepare.<br/>Upper Case national short form. ex: "EN", "DE", "ZH".</param>
         /// <param name="langsToAi">if the entry doesn't exist or is empty, and language doesn't exist in this array, it'll fill in the english entry for it.</param>
         /// <returns>Level 1 Key is the language, level 2 Key is the Entries Key.</returns>
-        public static Dictionary<string, Dictionary<string, MetaData<object?>>> GetAllLangResources(HashSet<string> existing, string resource, string[] langs, IEnumerable<string> langsToAi)
+        public static Dictionary<string, Dictionary<string, MetaData<object?>>> GetAllLangResources(Dictionary<string, string> existing, string resource, Func<string, string> GetLangStr, string[] langs)
         {
             // To store the Data of each language.
             Dictionary<string, Dictionary<string, MetaData<object?>>> translations = [];
@@ -88,13 +88,12 @@ namespace Ellab_Resource_Translater.Util
             translations.Add("EN", ResourceHandler.ReadResource<object?>(resource));
             foreach (var lang in langs)
             {
-                bool aiTrans = langsToAi.Contains(lang);
-                string langPath = Path.ChangeExtension(resource, $".{lang.ToLower()}.resx");
+                string langPath = Path.ChangeExtension(resource, $".{GetLangStr(lang)}.resx");
                 // Setup the Translations
-                if (!existing.Contains(langPath))
-                    translations.Add(lang, []);
+                if (existing.TryGetValue(langPath, out string? truePath))
+                    translations.Add(lang, ResourceHandler.ReadResource<object?>(truePath));
                 else
-                    translations.Add(lang, ResourceHandler.ReadResource<object?>(langPath));
+                    translations.Add(lang, []);
             }
 
             return translations;
@@ -114,9 +113,9 @@ namespace Ellab_Resource_Translater.Util
         /// <br/>If the entry just doesn't exist or is empty, it'll be translated with the TranslationService.</param>
         /// <param name="translationService">The service that uses ai to translate the entry values.</param>
         /// <returns>Level 1 Key is the language, level 2 Key is the Entries Key.</returns>
-        public static Dictionary<string, Dictionary<string, MetaData<object?>>> GetAllLangResources(HashSet<string> existing, string resource, string[] langs, IEnumerable<string> langsToAi, TranslationService? translationService)
+        public static Dictionary<string, Dictionary<string, MetaData<object?>>> GetAllLangResources(Dictionary<string, string> existing, string resource, Func<string, string> GetLangStr, string[] langs, IEnumerable<string> langsToAi, TranslationService? translationService)
         {
-            var output = GetAllLangResources(existing, resource, langs, langsToAi);
+            var output = GetAllLangResources(existing, resource, GetLangStr, langs);
             // Only get the once that are in both arrays/enumerables.
             var translatelangs = langs.Intersect(langsToAi);
             foreach (var lang in translatelangs)
