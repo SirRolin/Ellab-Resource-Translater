@@ -88,7 +88,7 @@ namespace Ellab_Resource_Translater.Util
             translations.Add("EN", ResourceHandler.ReadResource<object?>(resource));
             foreach (var lang in langs)
             {
-                string langPath = Path.ChangeExtension(resource, $".{GetLangStr(lang)}.resx");
+                string langPath = Path.ChangeExtension(resource, $"{GetLangStr(lang)}.resx").ToLower();
                 // Setup the Translations
                 if (existing.TryGetValue(langPath, out string? truePath))
                     translations.Add(lang, ResourceHandler.ReadResource<object?>(truePath));

@@ -55,85 +55,85 @@ namespace Ellab_Resource_Translater.Util
 
         /// <summary>
         /// Shows <paramref name="processName"/> on the <paramref name="listView"/> while <paramref name="process"/> is running.<br/>
-        /// Then it runs <paramref name="onDone"/>.
+        /// Then it runs <paramref name="onStart"/>.
         /// </summary>
-        /// <param name="onDone">Called when done</param>
+        /// <param name="onStart">Called before starting the process</param>
         /// <param name="listView"><see cref="ListView"/> to show the process name on</param>
         /// <param name="processName">Full name of the process</param>
         /// <param name="process">Process to execute</param>
-        public static void ShowOnListWhileProcessing(Action onDone, ListView listView, string processName, Action process)
+        public static void ShowOnListWhileProcessing(Action onStart, ListView listView, string processName, Action process)
         {
-            ShowOnListWhileProcessing((s) => s, onDone, listView, processName, process);
+            ShowOnListWhileProcessing((s) => s, onStart, listView, processName, process);
         }
 
         /// <summary>
         /// Shows <paramref name="processName"/> (shortened by <paramref name="pathLength"/>) on the <paramref name="listView"/> while <paramref name="process"/> is running.<br/>
-        /// Then it runs <paramref name="onDone"/>.
+        /// Then it runs <paramref name="onStart"/>.
         /// </summary>
         /// <param name="pathLength">How much to shorten the ProcessName by triming the start of the <paramref name="processName"/></param>
-        /// <param name="onDone">Called when done</param>
+        /// <param name="onStart">Called before starting the process</param>
         /// <param name="listView"><see cref="ListView"/> to show the process name on</param>
         /// <param name="processName">Full name of the process</param>
         /// <param name="process">Process to execute</param>
-        public static void ShowOnListWhileProcessing(int pathLength, Action onDone, ListView listView, string processName, Action process)
+        public static void ShowOnListWhileProcessing(int pathLength, Action onStart, ListView listView, string processName, Action process)
         {
-            ShowOnListWhileProcessing((s) => s[(pathLength + 1)..], onDone, listView, processName, process);
+            ShowOnListWhileProcessing((s) => s[(pathLength + 1)..], onStart, listView, processName, process);
         }
 
         /// <summary>
         /// Shows <paramref name="getName"/>(<paramref name="processName"/>) on the <paramref name="listView"/> while <paramref name="process"/> is running.<br/>
-        /// Then it runs <paramref name="onDone"/>.
+        /// Then it runs <paramref name="onStart"/>.
         /// </summary>
         /// <param name="getName">Function to get the name of the process</param>
-        /// <param name="onDone">Called when done</param>
+        /// <param name="onStart">Called before starting the process</param>
         /// <param name="listView"><see cref="ListView"/> to show the process name on</param>
         /// <param name="processName">Full name of the process</param>
         /// <param name="process">Process to execute</param>
-        public static void ShowOnListWhileProcessing(Func<string, string> getName, Action onDone, ListView listView, string processName, Action process)
+        public static void ShowOnListWhileProcessing(Func<string, string> getName, Action onStart, ListView listView, string processName, Action process)
         {
             string shortenedPath = getName(processName);
             ListViewItem listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
+            onStart.Invoke();
 
             process();
 
             listView.Invoke(() => listView.Items.Remove(listViewItem));
-            onDone.Invoke();
         }
 
         /// <summary>
         /// Shows <paramref name="processName"/> (shortened by <paramref name="pathLength"/>) on the <paramref name="listView"/> while <paramref name="process"/> is running.<br/>
-        /// Then it runs <paramref name="onDone"/>.<br/>
+        /// Then it runs <paramref name="onStart"/>.<br/>
         /// Then Returns the result of <paramref name="process"/>.
         /// </summary>
         /// <param name="pathLength">How much to shorten the ProcessName by triming the start of the <paramref name="processName"/></param>
-        /// <param name="onDone">Called when done</param>
+        /// <param name="onStart">Called before starting the process</param>
         /// <param name="listView"><see cref="ListView"/> to show the process name on</param>
         /// <param name="processName">Full name of the process</param>
         /// <param name="process">Process to execute</param>
-        public static TResult ShowOnListWhileProcessing<TResult>(int pathLength, Action onDone, ListView listView, string processName, Func<ListViewItem, TResult> process)
+        public static TResult ShowOnListWhileProcessing<TResult>(int pathLength, Action onStart, ListView listView, string processName, Func<ListViewItem, TResult> process)
         {
-            return ShowOnListWhileProcessing((s) => s[(pathLength + 1)..], onDone, listView, processName, process);
+            return ShowOnListWhileProcessing((s) => s[(pathLength + 1)..], onStart, listView, processName, process);
         }
 
         /// <summary>
         /// Shows <paramref name="getName"/>(<paramref name="processName"/>) on the <paramref name="listView"/> while <paramref name="process"/> is running.<br/>
-        /// Then it runs <paramref name="onDone"/>.<br/>
+        /// Then it runs <paramref name="onStart"/>.<br/>
         /// Then Returns the result of <paramref name="process"/>.
         /// </summary>
         /// <param name="getName">Function to get the name of the process</param>
-        /// <param name="onDone">Called when done</param>
+        /// <param name="onStart">Called before starting the process</param>
         /// <param name="listView"><see cref="ListView"/> to show the process name on</param>
         /// <param name="processName">Full name of the process</param>
         /// <param name="process">Process to execute</param>
-        public static TResult ShowOnListWhileProcessing<TResult>(Func<string, string> getName, Action onDone, ListView listView, string processName, Func<ListViewItem, TResult> process)
+        public static TResult ShowOnListWhileProcessing<TResult>(Func<string, string> getName, Action onStart, ListView listView, string processName, Func<ListViewItem, TResult> process)
         {
             string shortenedPath = getName(processName);
             ListViewItem listViewItem = listView.Invoke(() => listView.Items.Add(shortenedPath));
+            onStart.Invoke();
 
             var output = process(listViewItem);
 
             listView.Invoke(() => listView.Items.Remove(listViewItem));
-            onDone.Invoke();
 
             return output;
         }
@@ -145,7 +145,7 @@ namespace Ellab_Resource_Translater.Util
         /// <param name="texts"><see cref="Object"/>s to ToString() and add to <paramref name="label"/></param>
         public static void LabelTextUpdater(Label label, params object[] texts)
         {
-            label.Invoke(() => label.Text = string.Concat(texts.ToString()));
+            label.Invoke(() => label.Text = string.Concat(texts));
         }
 
         /// <summary>

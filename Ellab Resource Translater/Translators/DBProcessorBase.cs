@@ -273,7 +273,7 @@ namespace Ellab_Resource_Translater.Translators
                 while (files.TryDequeue(out var resourceName))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        onDone: () => myUpdate(TITLE, currentProgress, fileCount),
+                        onStart: () => myUpdate(TITLE, currentProgress, fileCount),
                         listView: view,
                         processName: i + ") Fetching Data...",
                         process: () => processChanges(path, resourceName));
@@ -318,7 +318,7 @@ namespace Ellab_Resource_Translater.Translators
                 while (dataRows.TryDequeue(out var rowData))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        onDone: () => myUpdate(TITLE, currentProgress, rowCount),
+                        onStart: () => myUpdate(TITLE, currentProgress, rowCount),
                         listView: view,
                         processName: threadNum + ") Fetching Data...",
                         process: () => processRow(rowData.row, rowData.dataTNum));
@@ -361,7 +361,7 @@ namespace Ellab_Resource_Translater.Translators
                 while (dataTables.TryDequeue(out DataTable? table))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        onDone: () => myUpdate(TITLE, currentProgress, tableCount),
+                        onStart: () => myUpdate(TITLE, currentProgress, tableCount),
                         listView: view,
                         processName: threadNum + ") Fetching Data...",
                         process: () => processTable(table));

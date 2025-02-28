@@ -12,10 +12,7 @@ namespace Ellab_Resource_Translater.Translators
     {
         internal string[] folders = ["dottxt20", "Popup20", "ReportTxtStr"];
 
-        private static Func<string, string> getLocaleVarient()
-        {
-            return lang => "." + lang.ToLower() + "-" + lang.ToUpper();
-        }
+        private static Func<string, string> getLocaleVarient() => lang => "." + lang.ToLower() + "-" + lang.ToUpper();
 
         internal void Run(string path, ListView view, Label progresText)
         {
