@@ -12,7 +12,7 @@ namespace Ellab_Resource_Translater.Translators
     {
         internal string[] folders = ["dottxt20", "Popup20", "ReportTxtStr"];
 
-        private static Func<string, string> getLocaleVarient() => lang => "." + lang.ToLower() + "-" + lang.ToUpper();
+        private static Func<string, string> getLocaleVarient() => lang => "." + lang.ToLower() + "-" + uppercaseShort(lang);
 
         internal void Run(string path, ListView view, Label progresText)
         {
@@ -23,6 +23,18 @@ namespace Ellab_Resource_Translater.Translators
                 progresText,
                 // \\(dottxt20|popup20|ReportTxtstr)\\ means that it has to be in a folder that's either dottxt20, popup20 or ReportTxtstr.
                 new($@".*\\({folderStr})\\.*(?<!\.[\w-]*)\.resx"));
+        }
+
+        private static string uppercaseShort(string shortLang)
+        {
+            return shortLang.ToLower() switch
+            {
+                "zh" => "CH",
+                "sv" => "SE",
+                "ja" => "JP",
+                "ar" => "SA",
+                _ => shortLang.ToUpper()
+            };
         }
     }
 }
