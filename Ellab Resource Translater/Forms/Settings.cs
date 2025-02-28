@@ -57,7 +57,7 @@ namespace Ellab_Resource_Translater
             var config = Config.Get();
             var languagePairs = Config.DefaultLanguages();
 
-            FormUtils.SaveCheckBoxListLocalised(
+            FormUtils.SaveCheckBoxListChangeLocalised(
                 list: config.languagesToAiTranslate,
                 checkedListBox: TranslationCheckedListBox,
                 localiser: languagePairs);
@@ -75,72 +75,24 @@ namespace Ellab_Resource_Translater
                 localiser: languagePairs
                 );
 
-            EMsuitePath.Text = config.EMPath;
-            ValPath.Text = config.ValPath;
-            ReaderNumeric.Value = config.threadsToUse;
-            InserterNumeric.Value = config.insertersToUse;
-            CloseOnSuccess.Checked = config.closeOnceDone;
+            FormUtils.LinkVariable(ref DelayNumeric, config.checkDelay);
+            FormUtils.LinkVariable(ref EMsuitePath, config.EMPath);
+            FormUtils.LinkVariable(ref ValPath, config.ValPath);
+            FormUtils.LinkVariable(ref ReaderNumeric, config.threadsToUse);
+            FormUtils.LinkVariable(ref InserterNumeric, config.insertersToUse);
+            FormUtils.LinkVariable(ref CloseOnSuccess, config.closeOnceDone);
+
             Config.AssignSizeSetting(this, (s) => config.SettingWindowSize = s, this.Size);
             setup--;
 
             TooltipNormal.SetToolTip(ReaderLabel, "Amount of threads to use when reading/writing from/to the disk");
             TooltipNormal.SetToolTip(InserterLabel, "Amount of threads to use when writing to the database");
-            TooltipNormal.SetToolTip(DelayLabel, "");
+            TooltipNormal.SetToolTip(DelayLabel, "Amount of ms between each wait check when waiting.");
         }
 
         private void Settings_Exit(object? sender, EventArgs e)
         {
             Config.Save();
-        }
-
-        private void EMsuitePath_TextChanged(object sender, EventArgs e)
-        {
-            // While Loading I don't want this to run
-            if (setup > 0)
-                return;
-
-            Config.Get().EMPath = EMsuitePath.Text;
-        }
-
-        private void NotEmPath_TextChanged(object sender, EventArgs e)
-        {
-            // While Loading I don't want this to run
-            if (setup > 0)
-                return;
-
-            Config.Get().ValPath = ValPath.Text;
-        }
-
-        private void NumericUpDown1_ValueChanged(object sender, EventArgs e)
-        {
-            // While Loading I don't want this to run
-            if (setup > 0)
-                return;
-
-            Config.Get().threadsToUse = (int)ReaderNumeric.Value;
-        }
-
-        private void CloseOnSuccess_CheckedChanged(object sender, EventArgs e)
-        {
-            // While Loading I don't want this to run
-            if (setup > 0)
-                return;
-
-            Config.Get().closeOnceDone = CloseOnSuccess.Checked;
-        }
-
-        private void InserterNumeric_ValueChanged(object sender, EventArgs e)
-        {
-            // While Loading I don't want this to run
-            if (setup > 0)
-                return;
-
-            Config.Get().insertersToUse = (int)InserterNumeric.Value;
-        }
-
-        private void DelayNumeric_ValueChanged(object sender, EventArgs e)
-        {
-            Config.Get().checkDelay = Convert.ToInt32(DelayNumeric.Value);
         }
     }
 }

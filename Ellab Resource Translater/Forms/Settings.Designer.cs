@@ -116,7 +116,6 @@ namespace Ellab_Resource_Translater
             EMsuitePath.Name = "EMsuitePath";
             EMsuitePath.Size = new Size(375, 23);
             EMsuitePath.TabIndex = 0;
-            EMsuitePath.TextChanged += EMsuitePath_TextChanged;
             // 
             // EMsuiteFBButton
             // 
@@ -147,7 +146,6 @@ namespace Ellab_Resource_Translater
             ValPath.Name = "ValPath";
             ValPath.Size = new Size(375, 23);
             ValPath.TabIndex = 3;
-            ValPath.TextChanged += NotEmPath_TextChanged;
             // 
             // ValFBButton
             // 
@@ -234,7 +232,6 @@ namespace Ellab_Resource_Translater
             ReaderNumeric.Size = new Size(172, 23);
             ReaderNumeric.TabIndex = 1;
             ReaderNumeric.Value = new decimal(new int[] { 32, 0, 0, 0 });
-            ReaderNumeric.ValueChanged += NumericUpDown1_ValueChanged;
             // 
             // ReaderLabel
             // 
@@ -267,7 +264,6 @@ namespace Ellab_Resource_Translater
             InserterNumeric.Size = new Size(172, 23);
             InserterNumeric.TabIndex = 1;
             InserterNumeric.Value = new decimal(new int[] { 4, 0, 0, 0 });
-            InserterNumeric.ValueChanged += InserterNumeric_ValueChanged;
             // 
             // InserterLabel
             // 
@@ -303,7 +299,6 @@ namespace Ellab_Resource_Translater
             DelayNumeric.Size = new Size(172, 23);
             DelayNumeric.TabIndex = 1;
             DelayNumeric.Value = new decimal(new int[] { 100, 0, 0, 0 });
-            DelayNumeric.ValueChanged += DelayNumeric_ValueChanged;
             // 
             // DelayLabel
             // 
@@ -327,7 +322,6 @@ namespace Ellab_Resource_Translater
             CloseOnSuccess.TabIndex = 2;
             CloseOnSuccess.Text = "Close Program if Successful";
             CloseOnSuccess.UseVisualStyleBackColor = true;
-            CloseOnSuccess.CheckedChanged += CloseOnSuccess_CheckedChanged;
             // 
             // TooltipNormal
             // 
