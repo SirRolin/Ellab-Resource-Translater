@@ -63,14 +63,14 @@ namespace Ellab_Resource_Translater.Util
                 client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", creds);
                 client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Region", region);
 
-                var requestBody = "[{\"Text\": \"Ping\"}]";
+                var requestBody = "";
 
                 using HttpContent content = new StringContent(requestBody, Encoding.UTF8, "application/json");
 
                 try
                 {
                     HttpResponseMessage response = await client.PostAsync(_uri + "/translate?api-version=3.0&to=fr", content);
-                    return response.IsSuccessStatusCode;
+                    return ((int)response.StatusCode) == 400;
                 }
                 catch (Exception ex)
                 {
