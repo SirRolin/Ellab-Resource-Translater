@@ -181,8 +181,7 @@ namespace Ellab_Resource_Translater
                     AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = "Azure Connecting...");
                     try
                     {
-                        AzureKeyCredential credentials = new(azureCreds.Key);
-                        translationService = new(creds: credentials, uri: new Uri(azureCreds.URI), region: azureCreds.Region)
+                        translationService = new(creds: azureCreds.Key, uri: new Uri(azureCreds.URI), region: azureCreds.Region)
                         {
                             msWaitTime = Config.Get().checkDelay
                         };
@@ -194,6 +193,7 @@ namespace Ellab_Resource_Translater
                     catch (Exception ex)
                     {
                         AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = ex.Message);
+                        RefreshAzureButton.Invoke(() => RefreshAzureButton.Enabled = true);
                         return;
                     }
                     return;

@@ -2,13 +2,18 @@
 using Azure.AI.Translation.Text;
 using Azure.Core;
 using Ellab_Resource_Translater.Objects;
+using System.Drawing;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using static Org.BouncyCastle.Math.EC.ECCurve;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Ellab_Resource_Translater.Util
 {
-    public class TranslationService(AzureKeyCredential creds, Uri uri, string region)
+    public class TranslationService(string creds, Uri uri, string region)
     {
-        private readonly TextTranslationClient _client = new(creds, uri, region);
+        private readonly TextTranslationClient _client = new(new AzureKeyCredential(creds), uri, region);
         private readonly Uri _uri = uri;
         public int msWaitTime = 100;
 
@@ -48,11 +53,30 @@ namespace Ellab_Resource_Translater.Util
 
         public async Task<bool> CanReachAzure()
         {
+            if(creds == null)
+            {
+                return false;
+            }
             try
             {
                 using HttpClient client = new();
-                HttpResponseMessage response = await client.GetAsync(_uri);
-                return response.IsSuccessStatusCode;
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Key", creds);
+                client.DefaultRequestHeaders.Add("Ocp-Apim-Subscription-Region", region);
+
+                var requestBody = "[{\"Text\": \"Ping\"}]";
+
+                using HttpContent content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+
+                try
+                {
+                    HttpResponseMessage response = await client.PostAsync(_uri + "/translate?api-version=3.0&to=fr", content);
+                    return response.IsSuccessStatusCode;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to reach Azure: {ex.Message}");
+                    return false;
+                }
             }
             catch (Exception ex)
             {
