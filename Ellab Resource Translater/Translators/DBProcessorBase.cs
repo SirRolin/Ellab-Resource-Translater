@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace Ellab_Resource_Translater.Translators
@@ -459,8 +460,12 @@ namespace Ellab_Resource_Translater.Translators
             if (dth != null)
             {
                 // Filter to only be strings as others don't need translating
-                var toUpload = translations.Select(lang => new KeyValuePair<string, Dictionary<string, MetaData<string>>>(lang.Key, MetaData<string>.FilterTo(lang.Value)))
-                                           .ToDictionary();
+                Dictionary<string, Dictionary<string, MetaData<string>>> toUpload = translations.Select(langDict =>
+                    new KeyValuePair<string, Dictionary<string, MetaData<string>>>(
+                        langDict.Key,
+                        langDict.Value.FilterTo<string>().FilterKeyStartsOut("$", ">>$")
+                        ))
+                    .ToDictionary();
 
                 // Get the missing string entries that hasn't been translated and add them to the datatables to upload.
                 foreach (string lang in toUpload.Keys)
@@ -468,6 +473,7 @@ namespace Ellab_Resource_Translater.Translators
                     if (!lang.Equals("EN", StringComparison.OrdinalIgnoreCase))
                     {
                         var missing = ResourceHandler.GetMissingStringEntries(translations, lang, true);
+                        missing = missing.FilterKeyStartsOut("$", ">>$");
                         foreach (var item in missing)
                         {
                             toUpload[lang].Add(item.key, item);

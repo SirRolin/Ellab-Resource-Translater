@@ -141,26 +141,24 @@ namespace Ellab_Resource_Translater.Util
         public static void TranslateMissingValuesToLang(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, TranslationService? TranslationService)
         {
             List<MetaData<string>> missingTranslations = GetMissingStringEntries(translations, lang, false);
-            ////This is from before we wanted untranslated resources not to get saved as english in other language files.
-            //List<MetaData<object?>> emptyTranslations = [.. translations[lang].Values.Where(x => x.value is string str && str == string.Empty)];
 
             // Nothing to translate? return
             if (missingTranslations.Count == 0 || TranslationService == null)
                 return;
 
             // Get missing translation values in english as a Reverse Dictionary
-            // Filter so we don't get errors
+            // Filter Weird once away
             // GroupBy so that dublicate values doesn't break as it becomes a key
             // Another Filter to remove the once that doesn't have a text in english (can't translate empty string)
             Dictionary<string, MetaData<string>[]> kvp = missingTranslations
-                .Where(x => x.value is string).Select(x => new MetaData<string>(x.key, x.value?.ToString() ?? string.Empty, x.comment))
-                .Where(x => translations["EN"].ContainsKey(x.key))
+                .FilterKeyStartsOut("$", ">>$")
                 .GroupBy(keySelector: x => translations["EN"][x.key].value as string ?? string.Empty, x => x)
                 .Where(k => !k.Key.Equals(string.Empty))
                 .ToDictionary(g => g.Key, g => g.ToArray());
 
-
+            // Getting the values, which as this point is the keys
             string[] textsToTranslate = [.. kvp.Keys];
+
             if (textsToTranslate.Length > 0 && TranslationService != null)
             {
                 var response = TranslationService.TranslateTextAsync(textsToTranslate, lang).Result;
@@ -181,27 +179,27 @@ namespace Ellab_Resource_Translater.Util
                             transItem.value = string.Empty;
                             transItem.comment = String.Join("\n", transItem.comment, englishComment);
                         }
-
+                        
                         translations[lang].Add(transItem.key, new MetaData<object?>(transItem.key, transItem.value, transItem.comment));
                     }
                 }
             }
         }
 
-        public static List<MetaData<string>> GetMissingStringEntries(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, bool valuesEmpty)
+        public static List<MetaData<string>> GetMissingStringEntries(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, bool EMPTY_VALUES)
         {
             // Find missing translation keys
             List<MetaData<string>> missingTranslations = [];
             foreach (string entry in translations["EN"].Keys)
             {
-                bool NotAlreadyTranslated = !translations[lang].TryGetValue(entry, out MetaData<object?>? trans) || (trans.value is string strVal && string.IsNullOrEmpty(strVal));
-                if (translations["EN"][entry].value is string enValue && NotAlreadyTranslated)
+                bool alreadyTranslated = translations[lang].TryGetValue(entry, out MetaData<object?>? trans) && (trans.value is string strVal && !string.IsNullOrEmpty(strVal));
+                if (!alreadyTranslated && translations["EN"][entry].value is string enValue)
                 {
-                    var value = valuesEmpty ? string.Empty : enValue;
+                    string value = EMPTY_VALUES ? string.Empty : enValue;
                     var comment = translations["EN"][entry].comment;
 
                     // Add it to the Languages Dictionary
-                    missingTranslations.Add(new MetaData<string>(entry, value, comment));
+                    missingTranslations.Add(new MetaData<string>(entry, value, comment, lang));
                 }
             }
 

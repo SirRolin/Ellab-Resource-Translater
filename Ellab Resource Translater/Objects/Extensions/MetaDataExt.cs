@@ -38,5 +38,38 @@ namespace Ellab_Resource_Translater.Objects.Extensions
                 });
             }
         }
+
+        public static Dictionary<string, MetaData<Type>> FilterTo<Type>(this Dictionary<string, MetaData<object?>> metaData)
+        {
+            Dictionary<string, MetaData<Type>> output = [];
+            foreach (var item in metaData)
+            {
+                if (item.Value.value is Type typed)
+                {
+                    output.Add(item.Key, new MetaData<Type>(item.Key, typed, item.Value.comment, item.Value.language));
+                }
+            }
+            return output;
+        }
+
+        public static Dictionary<string, MetaData<string>> FilterKeyStartsOut(this IEnumerable<KeyValuePair<string, MetaData<string>>> metaData, params string[] strings)
+        {
+            IEnumerable<KeyValuePair<string, MetaData<string>>> output = metaData;
+            foreach (var filter in strings)
+            {
+                output = output.Where(x => !x.Key.StartsWith(filter));
+            }
+            return output.ToDictionary();
+        }
+
+        public static List<MetaData<string>> FilterKeyStartsOut(this IEnumerable<MetaData<string>> metaData, params string[] strings)
+        {
+            IEnumerable<MetaData<string>> output = metaData;
+            foreach (var filter in strings)
+            {
+                output = output.Where(x => !x.key.StartsWith(filter));
+            }
+            return [.. output];
+        }
     }
 }
