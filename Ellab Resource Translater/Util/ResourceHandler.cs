@@ -145,7 +145,7 @@ namespace Ellab_Resource_Translater.Util
             //List<MetaData<object?>> emptyTranslations = [.. translations[lang].Values.Where(x => x.value is string str && str == string.Empty)];
 
             // Nothing to translate? return
-            if (missingTranslations.Count == 0 || TranslationService != null)
+            if (missingTranslations.Count == 0 || TranslationService == null)
                 return;
 
             // Get missing translation values in english as a Reverse Dictionary

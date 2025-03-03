@@ -282,7 +282,7 @@ namespace Ellab_Resource_Translater
         {
             progressTitle.Invoke(() => progressTitle.Text = "Val Suite");
             var config = Config.Get();
-            if (!WaitWhileDBConnecting())
+            if (!CanDBConnecting())
             {
                 ShowBlockingOkMessage("DB Connection Failed, try again later", "DB Connection Failed");
                 return;
@@ -376,7 +376,7 @@ namespace Ellab_Resource_Translater
         {
             progressTitle.Invoke(() => progressTitle.Text = "EM Suite");
             var config = Config.Get();
-            if (!WaitWhileDBConnecting())
+            if (!CanDBConnecting())
             {
                 ShowBlockingOkMessage("DB Connection Failed, try again later", "DB Connection Failed");
                 return;
@@ -471,7 +471,7 @@ namespace Ellab_Resource_Translater
             cancelTSource?.Cancel();
         }
 
-        private bool WaitWhileDBConnecting()
+        private bool CanDBConnecting()
         {
             // if it can't connect or isn't trying, try.
             if (!new[]{ "DB " + CAN_CONNECT, "DB " + IS_CONNECTING, DB_CONN_DEFAULT }.Contains(connectionStatus.Text))
@@ -487,7 +487,7 @@ namespace Ellab_Resource_Translater
             }
 
             // Return if it can connect.
-            return connProv?.isDisposed() ?? false && connectionStatus.Text.Equals("DB " + CAN_CONNECT);
+            return !connProv?.isDisposed() ?? false && connectionStatus.Text.Equals("DB " + CAN_CONNECT);
         }
     }
 }
