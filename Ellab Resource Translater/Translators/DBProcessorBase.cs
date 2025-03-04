@@ -254,15 +254,16 @@ namespace Ellab_Resource_Translater.Translators
 
                 // Override in Memory
                 var changes = changesToRegister[transDictKey];
-                changes.ForEach(trans =>
+                changes.ForEach(change =>
                 {
-                    if (translations.TryGetValue(trans.key, out MetaData<object?>? oldtrans))
+                    if (translations.TryGetValue(change.key, out MetaData<object?>? oldtrans))
                     {
-                        oldtrans.value = trans.value;
+                        oldtrans.value = change.value;
+                        oldtrans.comment = change.comment;
                     }
                     else
                     {
-                        translations.Add(trans.key, trans);
+                        translations.Add(change.key, change);
                     }
                 });
 
@@ -309,7 +310,7 @@ namespace Ellab_Resource_Translater.Translators
                     changesToRegister.AddOrUpdate(resourceValue, [new MetaData<object?>(keyValue, valueValue, commentValue, languageValue)],
                         (key, orgList) =>
                         {
-                            orgList.Add(new MetaData<object?>(keyValue, valueValue, commentValue));
+                            orgList.Add(new MetaData<object?>(keyValue, valueValue, commentValue, languageValue));
                             return orgList;
                         });
                 }
