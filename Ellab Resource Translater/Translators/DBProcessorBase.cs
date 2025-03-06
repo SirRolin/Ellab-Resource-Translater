@@ -359,7 +359,7 @@ namespace Ellab_Resource_Translater.Translators
             {
                 if(ChangeTranslationColumns.TryExtract(idt, () => myUpdate(TITLE, tableProgress, tableCount), dataRows, out ChangeTranslationColumns ctc))
                 {
-                    dataColumns.TryAdd(idt.index, ctc);
+                    dataColumns.TryAdd(idt.Index, ctc);
                 }
             }
             ExecutionHandler.Execute(tableCount, maxThreads, (int threadNum) =>

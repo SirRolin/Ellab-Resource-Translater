@@ -1,5 +1,4 @@
-﻿using Ellab_Resource_Translater.Objects;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
@@ -18,16 +17,16 @@ namespace Ellab_Resource_Translater.Structs
         public DataColumn Language { get; } = language;
         public static bool TryExtract(Indexed<DataTable> dt, Action myUpdate, ConcurrentQueue<TableCollectionRow> dataRows, out ChangeTranslationColumns ctc)
         {
-            if (dt.item.Columns["ResourceName"] is DataColumn resourceColumn
-                && dt.item.Columns["Key"] is DataColumn keyColumn
-                && dt.item.Columns["ChangedText"] is DataColumn textColumn
-                && dt.item.Columns["Comment"] is DataColumn commentValue
-                && dt.item.Columns["LanguageCode"] is DataColumn languageValue)
+            if (dt.Item.Columns["ResourceName"] is DataColumn resourceColumn
+                && dt.Item.Columns["Key"] is DataColumn keyColumn
+                && dt.Item.Columns["ChangedText"] is DataColumn textColumn
+                && dt.Item.Columns["Comment"] is DataColumn commentValue
+                && dt.Item.Columns["LanguageCode"] is DataColumn languageValue)
             {
                 ctc = new(resourceColumn, keyColumn, textColumn, commentValue, languageValue);
-                foreach (DataRow row in dt.item.Rows)
+                foreach (DataRow row in dt.Item.Rows)
                 {
-                    dataRows.Enqueue(new TableCollectionRow(dt.index, row));
+                    dataRows.Enqueue(new TableCollectionRow(dt.Index, row));
                     myUpdate();
                 }
                 return true;

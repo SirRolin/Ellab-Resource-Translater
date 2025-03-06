@@ -1,4 +1,4 @@
-﻿using Ellab_Resource_Translater.Objects;
+﻿using Ellab_Resource_Translater.Structs;
 using Ellab_Resource_Translater.Util;
 using Newtonsoft.Json;
 using System;

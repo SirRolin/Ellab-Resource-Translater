@@ -1,7 +1,7 @@
 using Azure;
 using Azure.AI.Translation.Text;
 using Ellab_Resource_Translater.Forms;
-using Ellab_Resource_Translater.Objects;
+using Ellab_Resource_Translater.Structs;
 using Ellab_Resource_Translater.Translators;
 using Ellab_Resource_Translater.Util;
 using Newtonsoft.Json;
