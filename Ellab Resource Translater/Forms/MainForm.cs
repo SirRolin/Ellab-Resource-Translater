@@ -176,12 +176,12 @@ namespace Ellab_Resource_Translater
                 // Avoid trying to refresh while still connecting.
                 RefreshAzureButton.Invoke(() => RefreshAzureButton.Enabled = false);
 
-                if (azureCreds != null)
+                if (azureCreds.HasValue)
                 {
                     AzureConnectionStatus.Invoke(() => AzureConnectionStatus.Text = "Azure Connecting...");
                     try
                     {
-                        translationService = new(creds: azureCreds.Key, uri: new Uri(azureCreds.URI), region: azureCreds.Region)
+                        translationService = new(creds: azureCreds.Value.Key, uri: new Uri(azureCreds.Value.URI), region: azureCreds.Value.Region)
                         {
                             msWaitTime = Config.Get().checkDelay
                         };
