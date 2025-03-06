@@ -1,7 +1,9 @@
 ﻿using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Objects.Extensions;
+using Ellab_Resource_Translater.Structs;
 using Ellab_Resource_Translater.Util;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
@@ -179,15 +181,14 @@ namespace Ellab_Resource_Translater.Translators
                     // local helper function that updates the GUI.
                     void myUpdate(string pretext, Ref<int> currentProgress, int maxProgresses)
                     {
-                        Interlocked.Increment(ref currentProgress.value);
-                        FormUtils.LabelTextUpdater(progresText, pretext, currentProgress.value, " out of ", maxProgresses);
+                        FormUtils.LabelTextUpdater(progresText, pretext, Interlocked.Increment(ref currentProgress.value), " out of ", maxProgresses);
                     }
 
                     // Merging the Tables with column data so we can fetch it later.
                     // Reasoning for this is so we can multi-thread
-                    ConcurrentQueue<(int dataTNum, DataRow row)> dataRows = [];
-                    ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment, DataColumn language)> dataColumns = [];
-                    GetRowsAndColumnsFromDataTable(maxThreads, view, dataTables, dataRows, dataColumns, myUpdate);
+                    ConcurrentQueue<TableCollectionRow> dataRows = [];
+                    ConcurrentDictionary<int, ChangeTranslationColumns> dataColumns = [];
+                    GetRowsAndColumnsFromChangedTranslations(maxThreads, view, dataTables, dataRows, dataColumns, myUpdate);
 
                     // Groups the data with the Dictionary.
                     // Reasoning is that if we don't do this we wouldn't be able to multi-thread it, due to opening files with readwrite access blocks other threads from doing the same on the same file.
@@ -199,7 +200,7 @@ namespace Ellab_Resource_Translater.Translators
                     ConcurrentQueue<string> files = new(changesToRegister.Keys);
 
 
-                    Dictionary<string, string> allResources = getAllResourcePaths(path);
+                    TruePathDict allResources = GetAllResourcePaths(path);
 
                     // Process Changes by the ResourceFile
                     UpdateLocalFilesFromGroupedData(maxThreads, path, view, allResources, changesToRegister, files, myUpdate);
@@ -229,7 +230,7 @@ namespace Ellab_Resource_Translater.Translators
         private static void UpdateLocalFilesFromGroupedData(int maxThreads,
                                                             string path,
                                                             ListView view,
-                                                            Dictionary<string, string> allResources,
+                                                            TruePathDict allResources,
                                                             ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
                                                             ConcurrentQueue<string> files,
                                                             Action<string, Ref<int>, int> myUpdate)
@@ -246,7 +247,7 @@ namespace Ellab_Resource_Translater.Translators
                 var resourcePath = Path.Combine(rootPath, transDictKey);
 
                 // In Case the english and language files are not the same casing
-                if (allResources.TryGetValue(resourcePath.ToLowerInvariant(), out string? truePath))
+                if (allResources.Dict.TryGetValue(resourcePath.ToLowerInvariant(), out string? truePath))
                     resourcePath = truePath;
 
                 // Load Local data so we don't lose data that wasn't overriden
@@ -284,11 +285,11 @@ namespace Ellab_Resource_Translater.Translators
         }
 
         private void GroupByResourceFileFromRowsAndColumns(int maxThreads,
-                                                                  ListView view,
-                                                                  ConcurrentQueue<(int dataTNum, DataRow row)> dataRows,
-                                                                  ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment, DataColumn language)> dataColumns,
-                                                                  ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
-                                                                  Action<string, Ref<int>, int> myUpdate)
+                                                           ListView view,
+                                                           ConcurrentQueue<TableCollectionRow> dataRows,
+                                                           ConcurrentDictionary<int, ChangeTranslationColumns> dataColumns,
+                                                           ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
+                                                           Action<string, Ref<int>, int> myUpdate)
         {
             Ref<int> currentProgress = 0;
             int rowCount = dataRows.Count;
@@ -298,21 +299,22 @@ namespace Ellab_Resource_Translater.Translators
             myUpdate(TITLE, currentProgress, rowCount);
             void processRow(DataRow row, int dataTNumber)
             {
-                if (row[dataColumns[dataTNumber].resource] is string resourceValue
-                    && row[dataColumns[dataTNumber].key] is string keyValue
-                    && row[dataColumns[dataTNumber].value] is string valueValue
-                    && row[dataColumns[dataTNumber].comment] is string commentValue
-                    && row[dataColumns[dataTNumber].language] is string languageValue)
+                if (row[dataColumns[dataTNumber].Resource] is string resourceValue
+                    && row[dataColumns[dataTNumber].Key] is string keyValue
+                    && row[dataColumns[dataTNumber].Value] is string valueValue
+                    && row[dataColumns[dataTNumber].Comment] is string commentValue
+                    && row[dataColumns[dataTNumber].Language] is string languageValue)
                 {
                     if(!languageValue.Equals("en", StringComparison.OrdinalIgnoreCase)){
                         resourceValue = resourceValue.Insert(resourceValue.Length - 5, langToLocal(languageValue));
                     }
-                    changesToRegister.AddOrUpdate(resourceValue, [new MetaData<object?>(keyValue, valueValue, commentValue, languageValue)],
-                        (key, orgList) =>
-                        {
-                            orgList.Add(new MetaData<object?>(keyValue, valueValue, commentValue, languageValue));
-                            return orgList;
-                        });
+                    changesToRegister.AddOrUpdate(key: resourceValue,
+                        addValue: [new MetaData<object?>(keyValue, valueValue, commentValue, languageValue)],
+                        updateValueFactory: (key, orgList) =>
+                            {
+                                orgList.Add(new MetaData<object?>(keyValue, valueValue, commentValue, languageValue));
+                                return orgList;
+                            });
                 }
             }
             ExecutionHandler.Execute(maxThreads, rowCount, (threadNum) =>
@@ -323,50 +325,53 @@ namespace Ellab_Resource_Translater.Translators
                         onStart: () => myUpdate(TITLE, currentProgress, rowCount),
                         listView: view,
                         processName: threadNum + ") Fetching Data...",
-                        process: () => processRow(rowData.row, rowData.dataTNum));
+                        process: () => processRow(rowData.Row, rowData.DataTNum));
                 }
             });
         }
 
-        private static void GetRowsAndColumnsFromDataTable(int maxThreads,
-                                                           ListView view,
-                                                           ConcurrentQueue<DataTable> dataTables,
-                                                           ConcurrentQueue<(int dataTNum, DataRow row)> dataRows,
-                                                           ConcurrentDictionary<int, (DataColumn resource, DataColumn key, DataColumn value, DataColumn comment, DataColumn language)> dataColumns,
-                                                           Action<string, Ref<int>, int> myUpdate)
+        /// <summary>
+        /// Deconstructs datatables provided and makes them into <paramref name="dataColumns"/> and <paramref name="dataRows"/>.<br/>
+        /// Multithreaded up to table count & <paramref name="maxThreads"/>. Usually only 1.
+        /// </summary>
+        /// <param name="maxThreads">Upper Limit of simultanious tables being processed.</param>
+        /// <param name="view">List view that gets the process updated.</param>
+        /// <param name="dataTables">Tables to extract from.</param>
+        /// <param name="dataRows">Data rows with an index, usually empty at start.</param>
+        /// <param name="dataColumns">Each Tables Columns</param>
+        /// <param name="myUpdate">Called on after each row queued.</param>
+        private static void GetRowsAndColumnsFromChangedTranslations(
+                int maxThreads,
+                ListView view,
+                IEnumerable<DataTable> dataTables,
+                ConcurrentQueue<TableCollectionRow> dataRows,
+                ConcurrentDictionary<int, ChangeTranslationColumns> dataColumns,
+                Action<string, Ref<int>, int> myUpdate)
         {
-
-            int currentProgress = -1;
-            int tableCount = dataTables.Count;
+            Ref<int> tableProgress = -1;
+            int tableCount = dataTables.Count();
             const string TITLE = "Merging tables: ";
+            var indexedTables = new ConcurrentQueue<Indexed<DataTable>>([.. dataTables.Select((item, index) => new Indexed<DataTable>(item, index))]);
 
             // Initial Update of UI
-            myUpdate(TITLE, currentProgress, tableCount);
-            void processTable(DataTable dt)
+            myUpdate(TITLE, tableProgress, tableCount);
+            void processTable(Indexed<DataTable> idt)
             {
-                if (dt.Columns["ResourceName"] is DataColumn resourceColumn
-                    && dt.Columns["Key"] is DataColumn keyColumn
-                    && dt.Columns["ChangedText"] is DataColumn textColumn
-                    && dt.Columns["Comment"] is DataColumn commentValue
-                    && dt.Columns["LanguageCode"] is DataColumn languageValue)
+                if(ChangeTranslationColumns.TryExtract(idt, () => myUpdate(TITLE, tableProgress, tableCount), dataRows, out ChangeTranslationColumns ctc))
                 {
-                    dataColumns.TryAdd(currentProgress, (resourceColumn, keyColumn, textColumn, commentValue, languageValue));
-                    foreach (DataRow row in dt.Rows)
-                    {
-                        dataRows.Enqueue((currentProgress, row));
-                        myUpdate(TITLE, currentProgress, tableCount);
-                    }
+                    dataColumns.TryAdd(idt.index, ctc);
                 }
             }
             ExecutionHandler.Execute(tableCount, maxThreads, (int threadNum) =>
             {
-                while (dataTables.TryDequeue(out DataTable? table))
+                while (indexedTables.TryDequeue(out var indexedTable))
                 {
                     FormUtils.ShowOnListWhileProcessing(
-                        onStart: () => myUpdate(TITLE, currentProgress, tableCount),
+                        onStart: () => myUpdate(TITLE, tableProgress, tableCount),
                         listView: view,
                         processName: threadNum + ") Fetching Data...",
-                        process: () => processTable(table));
+                        process: () => processTable(indexedTable)
+                        );
                 }
             });
         }
@@ -375,8 +380,8 @@ namespace Ellab_Resource_Translater.Translators
         {
             // Tracks resources done - Starts at -1 so that we can call it to get the right format to start with.
             int currentProcessed = -1;
-            Dictionary<string, string> allResources = getAllResourcePaths(path);
-            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Select(x => x.Value).Where(x => regex.IsMatch(x)));
+            TruePathDict allResources = GetAllResourcePaths(path);
+            var englishQueuedFiles = new ConcurrentQueue<string>(allResources.Dict.Select(x => x.Value).Where(x => regex.IsMatch(x)));
 
             int maxProcesses = englishQueuedFiles.Count;
 
@@ -399,7 +404,7 @@ namespace Ellab_Resource_Translater.Translators
                 }
             }
             // Execution Time
-            ExecutionHandler.TryExecute(maxThreads, allResources.Count,
+            ExecutionHandler.TryExecute(maxThreads, allResources.Dict.Count,
                     action: (i) => ProcessQueue(rootPathLength: path.Length,
                                                                queue: englishQueuedFiles,
                                                                existingResources: allResources,
@@ -409,12 +414,12 @@ namespace Ellab_Resource_Translater.Translators
                 );
         }
 
-        private static Dictionary<string, string> getAllResourcePaths(string path)
+        private static TruePathDict GetAllResourcePaths(string path)
         {
-            return Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories).Select(truePath => new KeyValuePair<string, string>(truePath.ToLowerInvariant(), truePath)).ToDictionary();
+            return new(Directory.GetFiles(path, "*.resx", SearchOption.AllDirectories));
         }
 
-        private void ProcessQueue(int rootPathLength, ConcurrentQueue<string> queue, Dictionary<string, string> existingResources, Action update, ListView listView)
+        private void ProcessQueue(int rootPathLength, ConcurrentQueue<string> queue, TruePathDict existingResources, Action update, ListView listView)
         {
             while (!source.IsCancellationRequested && queue.TryDequeue(out var resource))
             {
@@ -438,14 +443,14 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private void TranslateResource(Dictionary<string, string> existingFiles, string resource, int pathLength)
+        private void TranslateResource(TruePathDict existingFiles, string resource, int pathLength)
         {
             // Translations work
             var langs = config.languagesToTranslate.ToArray();
-            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = ResourceHandler.GetAllLangResources(existingFiles, resource, langToLocal, langs, Config.Get().languagesToAiTranslate, TranslationService);
+            TranslationLangDictionary<object?> translations = ResourceHandler.GetAllLangResources(existingFiles, resource, langToLocal, langs, Config.Get().languagesToAiTranslate, TranslationService);
 
             // Save Translations
-            foreach (var item in translations)
+            foreach (var item in translations.Dict)
             {
                 if (!item.Key.Equals("EN", StringComparison.OrdinalIgnoreCase))
                     ResourceHandler.WriteResource(Path.ChangeExtension(resource, $"{langToLocal(item.Key)}.resx"), item.Value);
@@ -456,20 +461,20 @@ namespace Ellab_Resource_Translater.Translators
         }
 
 
-        private void WriteToDatabase(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<object?>>> translations)
+        private void WriteToDatabase(int pathLength, string resource, TranslationLangDictionary<object?> translations)
         {
             if (dth != null)
             {
                 // Filter to only be strings as others don't need translating
-                Dictionary<string, Dictionary<string, MetaData<string>>> toUpload = translations.Select(langDict =>
+                TranslationLangDictionary<string> toUpload = new(translations.Dict.Select(langDict =>
                     new KeyValuePair<string, Dictionary<string, MetaData<string>>>(
                         langDict.Key,
                         langDict.Value.FilterTo<string>().FilterKeyStartsOut("$", ">>$")
                         ))
-                    .ToDictionary();
+                    .ToDictionary());
 
                 // Get the missing string entries that hasn't been translated and add them to the datatables to upload.
-                foreach (string lang in toUpload.Keys)
+                foreach (string lang in toUpload.Dict.Keys)
                 {
                     if (!lang.Equals("EN", StringComparison.OrdinalIgnoreCase))
                     {
@@ -477,7 +482,7 @@ namespace Ellab_Resource_Translater.Translators
                         missing = missing.FilterKeyStartsOut("$", ">>$");
                         foreach (var item in missing)
                         {
-                            toUpload[lang].Add(item.key, item);
+                            toUpload.Dict[lang].Add(item.key, item);
                         }
                     }
                 }
@@ -488,7 +493,7 @@ namespace Ellab_Resource_Translater.Translators
             }
         }
 
-        private static DataTable CreateDataTable<T>(int pathLength, string resource, Dictionary<string, Dictionary<string, MetaData<T>>> translations, int systemEnum)
+        private static DataTable CreateDataTable<T>(int pathLength, string resource, TranslationLangDictionary<T> translations, int systemEnum)
         {
             DataTable dataTable = new();
             dataTable.Columns.Add("ID", typeof(long));
@@ -499,7 +504,7 @@ namespace Ellab_Resource_Translater.Translators
             dataTable.Columns.Add("Text", typeof(string));
             dataTable.Columns.Add("IsTranlatedInValSuite", typeof(bool)); // The Spelling Error is on the Database
             dataTable.Columns.Add("SystemEnum", typeof(int));
-            foreach (var item in translations)
+            foreach (var item in translations.Dict)
             {
                 string language = item.Key;
                 // add language string (if not english), then cut rootPath away.

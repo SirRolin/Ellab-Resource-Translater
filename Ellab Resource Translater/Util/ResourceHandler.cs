@@ -1,5 +1,6 @@
 ﻿using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Objects.Extensions;
+using Ellab_Resource_Translater.Structs;
 using System.Collections;
 using System.Linq;
 using System.Resources;
@@ -81,20 +82,20 @@ namespace Ellab_Resource_Translater.Util
         /// <param name="GetLangStr">Gets the file surfix from language to check for language files.</param>
         /// <param name="langsToAi">if the entry doesn't exist or is empty, and language doesn't exist in this array, it'll fill in the english entry for it.</param>
         /// <returns>Level 1 Key is the language, level 2 Key is the Entries Key.</returns>
-        public static Dictionary<string, Dictionary<string, MetaData<object?>>> GetAllLangResources(Dictionary<string, string> existing, string resource, Func<string, string> GetLangStr, string[] langs)
+        public static TranslationLangDictionary<object?> GetAllLangResources(TruePathDict existing, string resource, Func<string, string> GetLangStr, string[] langs)
         {
             // To store the Data of each language.
-            Dictionary<string, Dictionary<string, MetaData<object?>>> translations = [];
+            TranslationLangDictionary<object?> translations = new([]);
             // Retrieve the English information
-            translations.Add("EN", ResourceHandler.ReadResource<object?>(resource));
+            translations.Dict.Add("EN", ResourceHandler.ReadResource<object?>(resource));
             foreach (var lang in langs)
             {
                 string langPath = Path.ChangeExtension(resource, $"{GetLangStr(lang)}.resx").ToLower();
                 // Setup the Translations
-                if (existing.TryGetValue(langPath, out string? truePath))
-                    translations.Add(lang, ResourceHandler.ReadResource<object?>(truePath));
+                if (existing.Dict.TryGetValue(langPath, out string? truePath))
+                    translations.Dict.Add(lang, ResourceHandler.ReadResource<object?>(truePath));
                 else
-                    translations.Add(lang, []);
+                    translations.Dict.Add(lang, []);
             }
 
             return translations;
@@ -114,7 +115,7 @@ namespace Ellab_Resource_Translater.Util
         /// <br/>If the entry just doesn't exist or is empty, it'll be translated with the TranslationService.</param>
         /// <param name="translationService">The service that uses ai to translate the entry values.</param>
         /// <returns>Level 1 Key is the language, level 2 Key is the Entries Key.</returns>
-        public static Dictionary<string, Dictionary<string, MetaData<object?>>> GetAllLangResources(Dictionary<string, string> existing, string resource, Func<string, string> GetLangStr, string[] langs, IEnumerable<string> langsToAi, TranslationService? translationService)
+        public static TranslationLangDictionary<object?> GetAllLangResources(TruePathDict existing, string resource, Func<string, string> GetLangStr, string[] langs, IEnumerable<string> langsToAi, TranslationService? translationService)
         {
             var output = GetAllLangResources(existing, resource, GetLangStr, langs);
             // Only get the once that are in both arrays/enumerables.
@@ -138,7 +139,7 @@ namespace Ellab_Resource_Translater.Util
         /// <param name="translations">Level 1 Key is the language, level 2 Key is the Entries Key.</param>
         /// <param name="lang">Which Language should we translate?</param>
         /// <param name="TranslationService">The service that uses ai to translate the entry values.</param>
-        public static void TranslateMissingValuesToLang(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, TranslationService? TranslationService)
+        public static void TranslateMissingValuesToLang(TranslationLangDictionary<object?> translations, string lang, TranslationService? TranslationService)
         {
             List<MetaData<string>> missingTranslations = GetMissingStringEntries(translations, lang, false);
 
@@ -152,7 +153,7 @@ namespace Ellab_Resource_Translater.Util
             // Another Filter to remove the once that doesn't have a text in english (can't translate empty string)
             Dictionary<string, MetaData<string>[]> kvp = missingTranslations
                 .FilterKeyStartsOut("$", ">>$")
-                .GroupBy(keySelector: x => translations["EN"][x.key].value as string ?? string.Empty, x => x)
+                .GroupBy(keySelector: x => translations.Dict["EN"][x.key].value as string ?? string.Empty, x => x)
                 .Where(k => !k.Key.Equals(string.Empty))
                 .ToDictionary(g => g.Key, g => g.ToArray());
 
@@ -174,29 +175,29 @@ namespace Ellab_Resource_Translater.Util
                             transItem.value = text;
                             transItem.comment = String.Join("\n", transItem.comment, "#AI");
                         }
-                        else if (translations["EN"][itemST].comment is string englishComment) // Shouldn't ever be false, but if it is, we avoid the error.
+                        else if (translations.Dict["EN"][itemST].comment is string englishComment) // Shouldn't ever be false, but if it is, we avoid the error.
                         {
                             transItem.value = string.Empty;
                             transItem.comment = String.Join("\n", transItem.comment, englishComment);
                         }
                         
-                        translations[lang].Add(transItem.key, new MetaData<object?>(transItem.key, transItem.value, transItem.comment));
+                        translations.Dict[lang].Add(transItem.key, new MetaData<object?>(transItem.key, transItem.value, transItem.comment));
                     }
                 }
             }
         }
 
-        public static List<MetaData<string>> GetMissingStringEntries(Dictionary<string, Dictionary<string, MetaData<object?>>> translations, string lang, bool EMPTY_VALUES)
+        public static List<MetaData<string>> GetMissingStringEntries(TranslationLangDictionary<object?> translations, string lang, bool EMPTY_VALUES)
         {
             // Find missing translation keys
             List<MetaData<string>> missingTranslations = [];
-            foreach (string entry in translations["EN"].Keys)
+            foreach (string entry in translations.Dict["EN"].Keys)
             {
-                bool alreadyTranslated = translations[lang].TryGetValue(entry, out MetaData<object?>? trans) && (trans.value is string strVal && !string.IsNullOrEmpty(strVal));
-                if (!alreadyTranslated && translations["EN"][entry].value is string enValue)
+                bool alreadyTranslated = translations.Dict[lang].TryGetValue(entry, out MetaData<object?>? trans) && (trans.value is string strVal && !string.IsNullOrEmpty(strVal));
+                if (!alreadyTranslated && translations.Dict["EN"][entry].value is string enValue)
                 {
                     string value = EMPTY_VALUES ? string.Empty : enValue;
-                    var comment = translations["EN"][entry].comment;
+                    var comment = translations.Dict["EN"][entry].comment;
 
                     // Add it to the Languages Dictionary
                     missingTranslations.Add(new MetaData<string>(entry, value, comment, lang));
