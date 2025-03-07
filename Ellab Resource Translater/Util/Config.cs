@@ -18,7 +18,7 @@ namespace Ellab_Resource_Translater.Util
             ["JA"] = "Japanese",
             ["KO"] = "Korean",
             ["NL"] = "Netherland",
-            //["PL"] = "Polish",
+            ["PL"] = "Polish",
             ["PT"] = "Portugese",
             ["TR"] = "Tyrkish",
             ["ZH"] = "Chinese"

@@ -176,7 +176,7 @@
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>oIN555HUN8eR0NixGr9DXZjz2Cg+ut5zmXntrVNGGP0=</dsig:DigestValue>
+      <dsig:DigestValue>dDFA6x8qLdgh+4nXi4cQVMpbL3aZZTZVWPb1rTIHgA0=</dsig:DigestValue>
     </hash>
   </file>
   <file name="Ellab Resource Translater.exe" size="110592">
@@ -185,7 +185,7 @@
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>1LnjFhYIsrnUChSimQ4pUHdsPCEjDC2XFic4jkEjifE=</dsig:DigestValue>
+      <dsig:DigestValue>Kn0wlLxP1X8BKFBphmknjQ5AODOVBrVEJK0cgQNr4r0=</dsig:DigestValue>
     </hash>
   </file>
   <file name="Ellab Resource Translater.runtimeconfig.json" size="525">

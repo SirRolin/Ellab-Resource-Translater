@@ -4,7 +4,8 @@
 
 
 -- See Valsuite entries 
- select a.* from Translation a where a.SystemEnum = 0 and a."Key" = '$this.Text' and a.ResourceName = 'dottxt20\LanDotTxtForm.resx';
+ select a.* from Translation a where a.Comment like '%#AI%';
+
 
 
 -- DELETE a FROm Translation a where (a."Key" LIKE '%.Font') or ISNUMERIC(a.Text) = 1;
