@@ -1,6 +1,5 @@
 ﻿using Ellab_Resource_Translater.Objects;
 using Ellab_Resource_Translater.Objects.Extensions;
-using Ellab_Resource_Translater.Structs;
 using Ellab_Resource_Translater.Util;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -116,10 +115,10 @@ namespace Ellab_Resource_Translater.Translators
 
             if (connProv != null && !token.IsCancellationRequested)
             {
-                using DbConnection dce = connProv.Get();
+                using DbConnection dbConn = connProv.Get();
 
                 // Read from the DB
-                using DbCommand command = dce.CreateCommand();
+                using DbCommand command = dbConn.CreateCommand();
 
                 /*// Only changes from changedTranslations
                 command.CommandText = $@"WITH changedTranslationsLatest AS (
@@ -156,7 +155,7 @@ namespace Ellab_Resource_Translater.Translators
                 langs.AddParam(command);
 
                 
-                dce.WaitForOpen(() =>
+                dbConn.WaitForOpen(() =>
                 {
                     source.Cancel();
                     source.Token.ThrowIfCancellationRequested();
@@ -176,7 +175,7 @@ namespace Ellab_Resource_Translater.Translators
                         dataTables.Enqueue(table);
                     }
 
-                    dce.TryClose();
+                    dbConn.TryClose();
 
                     // local helper function that updates the GUI.
                     void myUpdate(string pretext, Ref<int> currentProgress, int maxProgresses)
@@ -186,26 +185,24 @@ namespace Ellab_Resource_Translater.Translators
 
                     // Merging the Tables with column data so we can fetch it later.
                     // Reasoning for this is so we can multi-thread
-                    ConcurrentQueue<TableCollectionRow> dataRows = [];
-                    ConcurrentDictionary<int, ChangeTranslationColumns> dataColumns = [];
-                    GetRowsAndColumnsFromChangedTranslations(maxThreads, view, dataTables, dataRows, dataColumns, myUpdate);
+                    ConcurrentTable<ChangeTranslationColumns> mergedTables = new(maxThreads, view, dataTables, myUpdate);
 
                     // Groups the data with the Dictionary.
                     // Reasoning is that if we don't do this we wouldn't be able to multi-thread it, due to opening files with readwrite access blocks other threads from doing the same on the same file.
                     // Even if it wouldn't block, it would likely cause problems or at the very least be less efficient as it would open the same files multiple times.
-                    ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister = [];
-                    GroupByResourceFileFromRowsAndColumns(maxThreads, view, dataRows, dataColumns, changesToRegister, myUpdate);
-
-                    // ConcurrentDictionary can't be popped, so we have to have a queue of it's keys
-                    ConcurrentQueue<string> files = new(changesToRegister.Keys);
+                    GroupChanges<MetaData<object?>, ChangeTranslationColumns> groupChanges = new(maxThreads,
+                                                                                                 view,
+                                                                                                 mergedTables,
+                                                                                                 myUpdate,
+                                                                                                 "Grouping Data on same Resource Files: ");
 
 
                     TruePathDict allResources = GetAllResourcePaths(path);
 
                     // Process Changes by the ResourceFile
-                    UpdateLocalFilesFromGroupedData(maxThreads, path, view, allResources, changesToRegister, files, myUpdate);
+                    UpdateLocalFilesFromGroupedData(maxThreads, path, view, allResources, groupChanges, myUpdate);
 
-                    using DbCommand deleteCommand = dce.CreateCommand();
+                    using DbCommand deleteCommand = dbConn.CreateCommand();
                     deleteCommand.CommandText = $@"
                             DELETE FROM ChangedTranslation
                             WHERE ChangedTranslation.TranslationID IN (
@@ -215,14 +212,14 @@ namespace Ellab_Resource_Translater.Translators
                             );";
                     langs.AddParam(deleteCommand);
 
-                    dce.WaitForOpen(() =>
+                    dbConn.WaitForOpen(() =>
                     {
                         source.Cancel();
                         source.Token.ThrowIfCancellationRequested();
                     });
                     deleteCommand.ExecuteNonQuery();
                     deleteCommand.Dispose();
-                    dce.CloseAsync();
+                    dbConn.CloseAsync();
                 }
             }
         }
@@ -231,13 +228,16 @@ namespace Ellab_Resource_Translater.Translators
                                                             string path,
                                                             ListView view,
                                                             TruePathDict allResources,
-                                                            ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
-                                                            ConcurrentQueue<string> files,
+                                                            GroupChanges<MetaData<object?>, ChangeTranslationColumns> changesToRegister,
                                                             Action<string, Ref<int>, int> myUpdate)
         {
-            int currentProgress = -1;
-            int fileCount = files.Count;
+            Ref<int> currentProgress = -1;
             const string TITLE = "Saving Changes: ";
+
+            // ConcurrentDictionary can't be popped, so we have to have a queue of it's keys
+            ConcurrentQueue<string> files = new(changesToRegister.Dict.Keys);
+            int fileCount = files.Count;
+
 
             // Initial Update of UI
             myUpdate(TITLE, currentProgress, fileCount);
@@ -254,7 +254,7 @@ namespace Ellab_Resource_Translater.Translators
                 Dictionary<string, MetaData<object?>> translations = ResourceHandler.ReadResource<object?>(resourcePath);
 
                 // Override in Memory
-                var changes = changesToRegister[transDictKey];
+                var changes = changesToRegister.Dict[transDictKey];
                 changes.ForEach(change =>
                 {
                     if (translations.TryGetValue(change.key, out MetaData<object?>? oldtrans))
@@ -280,98 +280,6 @@ namespace Ellab_Resource_Translater.Translators
                         listView: view,
                         processName: i + ") Fetching Data...",
                         process: () => processChanges(path, resourceName));
-                }
-            });
-        }
-
-        private void GroupByResourceFileFromRowsAndColumns(int maxThreads,
-                                                           ListView view,
-                                                           ConcurrentQueue<TableCollectionRow> dataRows,
-                                                           ConcurrentDictionary<int, ChangeTranslationColumns> dataColumns,
-                                                           ConcurrentDictionary<string, List<MetaData<object?>>> changesToRegister,
-                                                           Action<string, Ref<int>, int> myUpdate)
-        {
-            Ref<int> currentProgress = 0;
-            int rowCount = dataRows.Count;
-            const string TITLE = "Grouping Data on same Resource Files: ";
-
-            // Initial Update of UI
-            myUpdate(TITLE, currentProgress, rowCount);
-            void processRow(DataRow row, int dataTNumber)
-            {
-                if (row[dataColumns[dataTNumber].Resource] is string resourceValue
-                    && row[dataColumns[dataTNumber].Key] is string keyValue
-                    && row[dataColumns[dataTNumber].Value] is string valueValue
-                    && row[dataColumns[dataTNumber].Comment] is string commentValue
-                    && row[dataColumns[dataTNumber].Language] is string languageValue)
-                {
-                    if(!languageValue.Equals("en", StringComparison.OrdinalIgnoreCase)){
-                        resourceValue = resourceValue.Insert(resourceValue.Length - 5, langToLocal(languageValue));
-                    }
-                    changesToRegister.AddOrUpdate(key: resourceValue,
-                        addValue: [new MetaData<object?>(keyValue, valueValue, commentValue, languageValue)],
-                        updateValueFactory: (key, orgList) =>
-                            {
-                                orgList.Add(new MetaData<object?>(keyValue, valueValue, commentValue, languageValue));
-                                return orgList;
-                            });
-                }
-            }
-            ExecutionHandler.Execute(maxThreads, rowCount, (threadNum) =>
-            {
-                while (dataRows.TryDequeue(out var rowData))
-                {
-                    FormUtils.ShowOnListWhileProcessing(
-                        onStart: () => myUpdate(TITLE, currentProgress, rowCount),
-                        listView: view,
-                        processName: threadNum + ") Fetching Data...",
-                        process: () => processRow(rowData.Row, rowData.DataTNum));
-                }
-            });
-        }
-
-        /// <summary>
-        /// Deconstructs datatables provided and makes them into <paramref name="dataColumns"/> and <paramref name="dataRows"/>.<br/>
-        /// Multithreaded up to table count & <paramref name="maxThreads"/>. Usually only 1.
-        /// </summary>
-        /// <param name="maxThreads">Upper Limit of simultanious tables being processed.</param>
-        /// <param name="view">List view that gets the process updated.</param>
-        /// <param name="dataTables">Tables to extract from.</param>
-        /// <param name="dataRows">Data rows with an index, usually empty at start.</param>
-        /// <param name="dataColumns">Each Tables Columns</param>
-        /// <param name="myUpdate">Called on after each row queued.</param>
-        private static void GetRowsAndColumnsFromChangedTranslations(
-                int maxThreads,
-                ListView view,
-                IEnumerable<DataTable> dataTables,
-                ConcurrentQueue<TableCollectionRow> dataRows,
-                ConcurrentDictionary<int, ChangeTranslationColumns> dataColumns,
-                Action<string, Ref<int>, int> myUpdate)
-        {
-            Ref<int> tableProgress = -1;
-            int tableCount = dataTables.Count();
-            const string TITLE = "Merging tables: ";
-            var indexedTables = new ConcurrentQueue<Indexed<DataTable>>([.. dataTables.Select((item, index) => new Indexed<DataTable>(item, index))]);
-
-            // Initial Update of UI
-            myUpdate(TITLE, tableProgress, tableCount);
-            void processTable(Indexed<DataTable> idt)
-            {
-                if(ChangeTranslationColumns.TryExtract(idt, () => myUpdate(TITLE, tableProgress, tableCount), dataRows, out ChangeTranslationColumns ctc))
-                {
-                    dataColumns.TryAdd(idt.Index, ctc);
-                }
-            }
-            ExecutionHandler.Execute(tableCount, maxThreads, (int threadNum) =>
-            {
-                while (indexedTables.TryDequeue(out var indexedTable))
-                {
-                    FormUtils.ShowOnListWhileProcessing(
-                        onStart: () => myUpdate(TITLE, tableProgress, tableCount),
-                        listView: view,
-                        processName: threadNum + ") Fetching Data...",
-                        process: () => processTable(indexedTable)
-                        );
                 }
             });
         }

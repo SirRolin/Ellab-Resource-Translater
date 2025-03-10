@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Ellab_Resource_Translater.Structs
+namespace Ellab_Resource_Translater.Objects
 {
-    public readonly struct TableCollectionRow(int dataTNum, DataRow row)
+    public sealed class TableCollectionRow(int dataTNum, DataRow row)
     {
         public int DataTNum { get; } = dataTNum;
         public DataRow Row { get; } = row;

@@ -12,9 +12,9 @@ namespace Ellab_Resource_Translater.Objects
     /// <param name="value"></param>
     [System.Text.Json.Serialization.JsonConverter(typeof(RefJsonConverterFactory))]
     [Newtonsoft.Json.JsonConverter(typeof(RefNewtonsoftConverter))]
-    public class Ref<T>
+    public class Ref<T>(T value)
     {
-        public T value;
+        public T value = value;
         public static implicit operator T(Ref<T> valRef) => valRef.value;
         public static implicit operator Ref<T>(T val) => new(val);
         override
@@ -22,10 +22,6 @@ namespace Ellab_Resource_Translater.Objects
         {
             return value?.ToString();
         }
-        public Ref(T value) { this.value = value; }
-        /// <summary>
-        /// Deserialization construct
-        /// </summary>
     }
 
     // So that we can automaticly serialise it as it's value instead of an object holding the value
